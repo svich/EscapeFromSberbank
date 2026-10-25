@@ -7,7 +7,7 @@ const G = CONFIG.groundY;
 
 // The runner. Stays at a fixed x; Arcade handles gravity and the floor (world
 // bounds bottom = ground). Emits 'player-jump' (air: boolean), 'player-land',
-// 'player-slide' and 'player-dive' for sound and particles.
+// 'player-slide', 'player-dive' and 'player-down' (fall) for sound and particles.
 export class Player extends Phaser.Physics.Arcade.Sprite {
   constructor(scene, x) {
     super(scene, x, 0, 'hero', 0);
@@ -51,6 +51,7 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
     body.setGravityY(body.velocity.y > 0 ? P.gravity * P.fallGravityMul : P.gravity);
 
     if (this.mode !== 'run') {
+      if (this.mode === 'dead') this.settle(dt, onGround);
       this.updateAnim(onGround);
       return;
     }
@@ -147,12 +148,29 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
     this.setHitbox(this.hero.body);
   }
 
-  die() {
+  // fall: 'trip' (forward onto her stomach), 'knock' (bounced back onto her
+  // bottom) or 'hurt' (a plain hurt hop).
+  die(fall = 'hurt') {
     this.mode = 'dead';
     this.endSlide();
     this.rising = false;
-    this.body.setVelocityY(-220 * SCALE);
-    this.play('hero-hurt');
+    this.fall = fall;
+    this.downTime = 0;
+    this.downed = false;
+    const hop = { trip: 170, knock: 200, hurt: 220 }[fall];
+    this.body.setVelocityY(-hop * SCALE);
+    this.deadAnim = fall === 'hurt' ? 'hero-hurt' : `heroDown-${fall}`;
+    if (fall !== 'hurt') this.setHitbox(this.hero.downBody);
+    this.play(this.deadAnim);
+  }
+
+  // Back on the floor after a trip or knock-back: lie / sit there, dazed.
+  settle(dt, onGround) {
+    this.downTime += dt;
+    if (this.downed || this.fall === 'hurt' || !onGround || this.downTime < 0.1) return;
+    this.downed = true;
+    this.deadAnim = this.fall === 'trip' ? 'heroDown-prone' : 'heroDown-sit';
+    this.emit('player-down', this.fall);
   }
 
   // Walk-off at the exit door: physics keeps her on the floor, the scene tweens x.
@@ -164,7 +182,7 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
 
   updateAnim(onGround) {
     let key;
-    if (this.mode === 'dead') key = 'hero-hurt';
+    if (this.mode === 'dead') key = this.deadAnim;
     else if (this.sliding) key = 'hero-slide';
     else if (!onGround) key = this.body.velocity.y < 0 ? 'hero-jump' : 'hero-fall';
     else key = 'hero-run';

@@ -10,7 +10,7 @@ import { computeMetrics, metrics } from '../systems/metrics.js';
 import { makeFxTextures } from '../systems/textures.js';
 import { addText } from '../ui/text.js';
 
-const LOOPING = new Set(['run', 'idle', 'slide', 'walk', 'flap', 'steam']);
+const LOOPING = new Set(['run', 'idle', 'slide', 'walk', 'flap', 'steam', 'prone', 'sit', 'spin']);
 
 // Turns the art canvases into textures and animations, derives sizes from
 // their metadata, and starts the menu.

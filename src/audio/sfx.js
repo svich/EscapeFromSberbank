@@ -17,9 +17,23 @@ export const SFX = {
     e.noise(t, 0.05, { type: 'lowpass', freq: 700, vol: 0.12 });
   },
 
-  coffee(e, t) {
+  coin(e, t) {
     e.tone(t, 988, 0.05, { wave: 'pulse25', vol: 0.1, decay: 0.04, sustain: 0.8 });
     e.tone(t + 0.055, 1319, 0.16, { wave: 'pulse25', vol: 0.1, decay: 0.14, sustain: 0.15, release: 0.05 });
+  },
+
+  // Coffee power-up: a whoosh up into a bright arpeggio.
+  dash(e, t) {
+    e.noise(t, 0.45, { type: 'bandpass', freq: 400, sweep: 3200, q: 0.8, vol: 0.2 });
+    [392, 523, 659, 784, 1047].forEach((f, i) => {
+      e.tone(t + i * 0.04, f, 0.08, { wave: 'pulse25', vol: 0.09, decay: 0.06, sustain: 0.4 });
+    });
+  },
+
+  // An obstacle sent flying by the dash.
+  smash(e, t) {
+    e.noise(t, 0.2, { type: 'lowpass', freq: 2400, sweep: 300, vol: 0.3 });
+    e.tone(t, 520, 0.14, { wave: 'pulse12', vol: 0.1, decay: 0.12, sustain: 0.2, slide: 1300 });
   },
 
   shieldGet(e, t) {
@@ -37,6 +51,17 @@ export const SFX = {
   hit(e, t) {
     e.tone(t, 260, 0.35, { wave: 'pulse50', vol: 0.18, decay: 0.3, sustain: 0.2, slide: 50 });
     e.noise(t, 0.32, { type: 'lowpass', freq: 1800, sweep: 200, vol: 0.32 });
+  },
+
+  // Hitting the floor after a trip or knock-back.
+  thud(e, t) {
+    e.tone(t, 150, 0.2, { wave: 'pulse50', vol: 0.16, decay: 0.16, sustain: 0.2, slide: 45 });
+    e.noise(t, 0.18, { type: 'lowpass', freq: 600, sweep: 120, vol: 0.32 });
+  },
+
+  // Sliding along the floor on her stomach.
+  skid(e, t) {
+    e.noise(t, 0.6, { type: 'bandpass', freq: 1500, sweep: 300, q: 0.9, vol: 0.16 });
   },
 
   zone(e, t) {

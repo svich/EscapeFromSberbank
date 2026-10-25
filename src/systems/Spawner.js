@@ -9,27 +9,22 @@ const lerp = (a, b, t) => a + (b - a) * t;
 const clamp = (v, lo, hi) => Math.min(hi, Math.max(lo, v));
 const randRange = ([lo, hi]) => lo + Math.random() * (hi - lo);
 
-export function zoneAt(meters) {
-  let zone = 0;
-  CONFIG.zones.forEach((z, i) => {
-    if (meters >= z.from) zone = i;
-  });
-  return zone;
-}
-
 // Plans obstacles by *arrival time* at the player's x, then spawns each one
 // early enough (given its own speed and the scroll) to arrive on schedule.
 // Gaps are lead/tail of each clear plus reaction slack, so every pattern is
 // clearable at any speed and fast objects never overtake slow ones.
+// Reads the level and run progress from the scene (zone, progress).
 export class Spawner {
   constructor(scene) {
     this.scene = scene;
-    this.queue = []; // { kind: 'obstacle' | 'coffee' | 'chocolate', type?, arrival, height?, intro? }
+    this.queue = []; // { kind: 'obstacle' | 'coin' | 'coffee' | 'chocolate', type?, arrival, height?, intro? }
     this.last = null; // last planned obstacle { type, arrival }
     this.introduced = new Set();
     this.recent = [];
     this.nextChocolateAt = PK.chocolateFirstAt;
-    this.done = false; // no more obstacles: the exit runway has been reached
+    this.coffeeLeft = PK.coffeePerZone;
+    this.nextCoffeeAt = randRange(PK.coffeeEvery);
+    this.done = false; // no more obstacles or pickups: the exit is open
     // Spawn line: off screen even for the widest sprite.
     const widest = Math.max(
       ...Object.values(metrics.obstacles).map((m) => m.frameW),
@@ -39,11 +34,18 @@ export class Spawner {
   }
 
   // Drops everything planned (after a flight between zones): planning starts
-  // over with the usual first-obstacle delay.
-  restart() {
+  // over with the usual first-obstacle delay. now: run time (s).
+  restart(now) {
     this.queue = [];
     this.last = null;
     this.recent = [];
+    this.coffeeLeft = PK.coffeePerZone;
+    this.nextCoffeeAt = now + randRange(PK.coffeeEvery);
+  }
+
+  stop() {
+    this.queue = [];
+    this.done = true;
   }
 
   // now: run time (s), speed: scroll (px/s), traveled: px.
@@ -69,29 +71,20 @@ export class Spawner {
     const prev = this.last;
     const base = prev ? prev.arrival + clearTiming(prev.type).tail : now + S.firstDelay;
     const meters = (traveled + Math.max(0, base - now) * speed) / PPM;
-    const runwayStart = CONFIG.finishMeters - S.finishRunway;
-    if (meters > runwayStart) {
-      this.done = true;
-      return;
-    }
-
-    const { type, intro } = this.pickType(zoneAt(meters), meters);
-    const difficulty = clamp(meters / CONFIG.finishMeters, 0, 1);
+    const { type, intro } = this.pickType(this.scene.zone, base);
+    const difficulty = clamp(this.scene.progress, 0, 1);
     const slack = (prev ? S.reaction : 0) + Math.random() * lerp(S.extraStart, S.extraEnd, difficulty) + (intro ? S.introBonus : 0);
     const arrival = base + clearTiming(type).lead + slack;
-    if ((traveled + (arrival - now) * speed) / PPM > runwayStart) {
-      this.done = true;
-      return;
-    }
 
     this.queue.push({ kind: 'obstacle', type, arrival, intro });
     this.planPickups(prev, { type, arrival }, meters);
     this.last = { type, arrival };
   }
 
-  pickType(zone, meters) {
+  // time: run time (s) the obstacle is planned for.
+  pickType(zone, time) {
     const weights = CONFIG.zones[zone].weights;
-    const unlocked = Object.keys(weights).filter((t) => metrics.obstacles[t] && meters >= CONFIG.obstacles[t].unlockAt);
+    const unlocked = Object.keys(weights).filter((t) => metrics.obstacles[t] && time >= CONFIG.obstacles[t].unlockAfter);
     const fresh = unlocked.find((t) => !this.introduced.has(t));
     if (fresh) {
       this.introduced.add(fresh);
@@ -115,10 +108,12 @@ export class Spawner {
     return { type, intro };
   }
 
-  // Coffee rows in free gaps, coffee over/under obstacles, and chocolates.
+  // Coin rows in free gaps, coins over/under obstacles, chocolates and the
+  // level's few coffees.
   planPickups(prev, next, meters) {
     const hero = metrics.hero;
     const jump = metrics.jump;
+    const coin = metrics.pickups.coin;
     const coffee = metrics.pickups.coffee;
     const chocolate = metrics.pickups.chocolate;
     const nextTiming = clearTiming(next.type);
@@ -128,30 +123,34 @@ export class Spawner {
     const mid = (freeStart + freeEnd) / 2;
     const groundH = hero.slideH / 2; // collectible standing or sliding
 
+    // Chocolate and coffee float just above the standing head: they need a hop.
     if (chocolate && meters >= this.nextChocolateAt && free >= 0.6) {
-      // Just above the standing head: needs a hop.
       this.queue.push({ kind: 'chocolate', arrival: mid, height: hero.standH + PK.chocolateLift + chocolate.h / 2 });
       this.nextChocolateAt = meters + randRange(PK.chocolateEvery);
-    } else if (coffee && free >= 0.75 && Math.random() < PK.lineChance) {
+    } else if (coffee && this.coffeeLeft > 0 && mid >= this.nextCoffeeAt && free >= 0.6) {
+      this.queue.push({ kind: 'coffee', arrival: mid, height: hero.standH + PK.chocolateLift + coffee.h / 2 });
+      this.coffeeLeft -= 1;
+      this.nextCoffeeAt = mid + randRange(PK.coffeeEvery);
+    } else if (coin && free >= 0.75 && Math.random() < PK.lineChance) {
       const n = clamp(Math.floor((free - 0.25) / PK.spacing) + 1, 3, 6);
       const start = mid - ((n - 1) * PK.spacing) / 2;
       const arc = Math.random() < 0.5;
       for (let i = 0; i < n; i++) {
         const lift = arc ? Math.sin((Math.PI * i) / (n - 1)) * jump.apex * 1.3 : 0;
-        this.queue.push({ kind: 'coffee', arrival: start + i * PK.spacing, height: groundH + lift });
+        this.queue.push({ kind: 'coin', arrival: start + i * PK.spacing, height: groundH + lift });
       }
     }
 
-    if (!coffee) return;
+    if (!coin) return;
     const kind = CONFIG.obstacles[next.type].kind;
     const top = metrics.obstacles[next.type].top;
     if (kind === 'slide' && Math.random() < PK.underChance) {
-      this.queue.push({ kind: 'coffee', arrival: next.arrival, height: groundH });
+      this.queue.push({ kind: 'coin', arrival: next.arrival, height: groundH });
     } else if (kind !== 'slide' && Math.random() < PK.overChance) {
       // Reward for clearing it; kept within reach of the jump that clears it.
       const reach = hero.standH + jump.apex + (kind === 'double' ? jump.extra : 0);
-      const height = Math.min(top + 4 * SCALE + coffee.h / 2, reach - coffee.h / 2 - 2 * SCALE);
-      this.queue.push({ kind: 'coffee', arrival: next.arrival, height });
+      const height = Math.min(top + 4 * SCALE + coin.h / 2, reach - coin.h / 2 - 2 * SCALE);
+      this.queue.push({ kind: 'coin', arrival: next.arrival, height });
     }
   }
 }

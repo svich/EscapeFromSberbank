@@ -46,7 +46,7 @@ export class VictoryScene extends Phaser.Scene {
     addPanel(this, 640, 290, 900, 330).setDepth(5);
     addStats(this, 700, 320, [
       ['Время', formatTime(data.time ?? 0)],
-      ['Кофе', `x${data.coffees}`, '#ffd23f'],
+      ['Монеты', `x${data.coins}`, '#ffd23f'],
       ['Шоколадок съедено', data.shieldsUsed],
       ['Счёт KPI', data.score],
       ['Лучший KPI', `${data.bestScore}${data.newBestScore ? '  НОВЫЙ!' : ''}`, data.newBestScore ? '#7ee08f' : undefined],

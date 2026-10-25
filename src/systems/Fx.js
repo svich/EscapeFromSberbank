@@ -3,8 +3,8 @@ import { addText } from '../ui/text.js';
 
 const px = (v) => v * SCALE;
 
-// Particle juice for the run: running dust, jump puffs, pickup sparkles and
-// floating score text.
+// Particle juice for the run: running dust, jump puffs, pickup sparkles, the
+// coffee dash trail and floating score text.
 export class Fx {
   constructor(scene) {
     this.scene = scene;
@@ -45,6 +45,29 @@ export class Fx {
         .setDepth(23);
     this.gold = sparkle([0xffffff, 0xffd23f, 0xff9a3c]);
     this.cyan = sparkle([0xffffff, 0x7fe3ff, 0x3d7bd9]);
+    // Sparkles get the world's scroll speed when emitted, so they hang where she ran.
+    this.dashTrail = scene.add
+      .particles(0, 0, 'fx-spark', {
+        x: { min: -px(6), max: px(6) },
+        y: { min: -px(16), max: px(16) },
+        speedX: { onEmit: () => -(scene.speed * scene.motion) * (0.85 + Math.random() * 0.15) },
+        speedY: { min: -px(25), max: px(25) },
+        lifespan: 750,
+        scale: { start: 2.2, end: 0 },
+        alpha: { start: 1, end: 0 },
+        rotate: { min: 0, max: 360 },
+        tint: [0xffd23f, 0xff9a3c, 0xffffff, 0xf27fb5, 0x7fe3ff],
+        frequency: 14,
+        quantity: 2,
+        emitting: false,
+      })
+      .setDepth(19);
+  }
+
+  setDashTrail(on, x, y) {
+    this.dashTrail.setPosition(x, y);
+    if (on && !this.dashTrail.emitting) this.dashTrail.start();
+    else if (!on && this.dashTrail.emitting) this.dashTrail.stop();
   }
 
   setDust(on, x, y) {

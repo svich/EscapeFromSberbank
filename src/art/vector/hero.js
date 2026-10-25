@@ -285,6 +285,121 @@ function drawSlide(ctx, tailPhase) {
   leg(ctx, [hip[0] + 1, hip[1]], [[7, 1], [13, 3]], C.jeans);
 }
 
+// --- Falls -------------------------------------------------------------------
+// Knocked down by an obstacle. Drawn in a wider frame (same height and ground
+// line) so she fits lying down.
+
+const DOWN_W = 96;
+
+// Little stars circling a dazed head.
+function dizzy(ctx, cx, cy, phase) {
+  for (let i = 0; i < 3; i++) {
+    const a = phase + (i * Math.PI * 2) / 3;
+    const x = cx + Math.cos(a) * 13;
+    const y = cy + Math.sin(a) * 3.5;
+    const r = 2.6 + Math.sin(a) * 0.6; // nearer ones look bigger
+    ctx.beginPath();
+    for (let j = 0; j < 10; j++) {
+      const rr = j % 2 ? r * 0.45 : r;
+      const b = -Math.PI / 2 + (j * Math.PI) / 5;
+      ctx.lineTo(x + Math.cos(b) * rr, y + Math.sin(b) * rr);
+    }
+    ctx.closePath();
+    ctx.fillStyle = '#ffd23f';
+    ctx.fill();
+    ctx.lineWidth = 0.8;
+    ctx.strokeStyle = C.outline;
+    ctx.lineJoin = 'round';
+    ctx.stroke();
+  }
+}
+
+// A normal pose drawn tilted about the hips (+ forward, - back).
+function tilted(ctx, [x, y], angle, draw) {
+  ctx.save();
+  ctx.translate(x, y);
+  ctx.rotate(angle);
+  ctx.translate(-34, -HIP_Y);
+  draw();
+  ctx.restore();
+}
+
+// Tripped: pitching forward over the obstacle, arms out to catch herself.
+function drawTrip(ctx) {
+  tilted(ctx, [46, 66], 0.75, () =>
+    drawPose(ctx, {
+      face: 'hurt',
+      legF: [[-2, 8], [-7, 15]],
+      legB: [[-5, 6], [-12, 8]],
+      armF: [[-6.4, 0.5], [-11.4, 3.8]],
+      armB: [[6.4, -0.5], [11.4, -2.4]],
+      tail: [-0.95, -0.2],
+      tailPhase: 2,
+      tailAmp: 1.5,
+    }),
+  );
+}
+
+// Face down on the floor after the trip, feet kicking up behind.
+function drawProne(ctx, k) {
+  leg(ctx, [36, 65], [[-9, 2], [-13 + k, -9 + k * 3]], C.jeansShade);
+  leg(ctx, [36, 71], [[-9, 1], [-17, 2]], C.jeans);
+  tilted(ctx, [36, 67.5], Math.PI / 2, () => torso(ctx, 0));
+  arm(ctx, [47, 68], [[-6, 5], [-12, 7]], C.skin, true);
+  ponytail(ctx, [53, 62], [-0.9, -0.45 + k * 0.2], k * Math.PI, 1.2);
+  ctx.save();
+  ctx.translate(68, 60.5);
+  ctx.rotate(0.3);
+  head(ctx, 0, 0, 'hurt');
+  ctx.restore();
+  dizzy(ctx, 68, 37, k * 1.2);
+}
+
+// Bounced off a bookcase: flung backwards, arms and legs forward.
+function drawKnock(ctx) {
+  tilted(ctx, [50, 64], -0.5, () =>
+    drawPose(ctx, {
+      face: 'hurt',
+      legF: [[7, 5], [12, 12]],
+      legB: [[6, 7], [8, 15]],
+      armF: [[-5.8, 0.2], [-11.2, -0.4]],
+      armB: [[7.3, -2.9], [13.6, -4]],
+      tail: [0.2, -1],
+      tailPhase: 1,
+      tailAmp: 1.4,
+    }),
+  );
+}
+
+// Sitting where she landed, leaning back on her hands.
+function drawSit(ctx, k) {
+  const hip = [50, 73];
+  tilted(ctx, hip, -0.35 - k * 0.04, () => {
+    ponytail(ctx, [21, 33], [-0.85, 0.55], k * Math.PI, 1.3);
+    arm(ctx, [39, 46], [[-4, 7], [-10, 11]], C.skinShade);
+    torso(ctx, 0);
+    head(ctx, 34, 25, 'hurt');
+    arm(ctx, [30, 46], [[-6, 6], [-9, 9.5]], C.skin, true);
+  });
+  leg(ctx, [hip[0] - 1, hip[1] - 1], [[9, -9], [15, 2]], C.jeansShade);
+  leg(ctx, [hip[0] + 2, hip[1]], [[9, -1], [17, 1]], C.jeans);
+  dizzy(ctx, 39, 21, k * 1.2);
+}
+
+export function buildHeroDown(scale) {
+  const frames = [drawTrip, (c) => drawProne(c, 0), (c) => drawProne(c, 1), drawKnock, (c) => drawSit(c, 0), (c) => drawSit(c, 1)];
+  return {
+    ...renderSheet(frames, DOWN_W, FRAME_H, scale),
+    anims: {
+      trip: { frames: [0], fps: 1 },
+      prone: { frames: [1, 2], fps: 4 },
+      knock: { frames: [3], fps: 1 },
+      sit: { frames: [4, 5], fps: 4 },
+    },
+    body: toPx(scale)({ x: 28, y: 52, w: 40, h: 26 }),
+  };
+}
+
 function poses() {
   const RUN_FRAMES = 8;
   const run = [];

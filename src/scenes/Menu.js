@@ -31,17 +31,18 @@ export class MenuScene extends Phaser.Scene {
       .setDepth(10)
       .play('hero-idle');
 
-    const panel = { x: 660, y: 350, w: 1180, h: 450 };
+    const panel = { x: 660, y: 350, w: 1180, h: 480 };
     addPanel(this, panel.x, panel.y, panel.w, panel.h).setDepth(5);
     const lines = [
       ['Пробел / ↑ / W', 'Прыжок (ещё раз — в воздухе)'],
       ['↓ / S', 'Подкат (в воздухе — нырок)'],
       ['Тап справа / слева', 'Прыжок / подкат'],
-      ['Esc / P', 'Пауза'],
-      ['M', 'Звук'],
+      ['Esc / P,  M', 'Пауза,  звук'],
+      ['Монеты', 'Собери цель уровня — и в самолёт'],
+      ['Кофе', '5 секунд сносишь всё на пути'],
     ];
     lines.forEach(([key, action], i) => {
-      const y = panel.y + 36 + i * 62;
+      const y = panel.y + 36 + i * 58;
       addText(this, panel.x + 50, y, key, { size: 36, color: '#ffd23f' }).setDepth(6);
       addText(this, panel.x + 470, y, action, { size: 36, weight: 400 }).setDepth(6);
     });

@@ -3,7 +3,7 @@
 // bottom on the floor.
 
 import { C, OW, capsule, ellipse, renderSheet, roundRect, shape, strokePts, text, toPx } from './draw.js';
-import { buildHero } from './hero.js';
+import { buildHero, buildHeroDown } from './hero.js';
 
 export const UNIT = 2.75;
 // Elders stand a touch shorter than the hero.
@@ -444,6 +444,44 @@ function coffee(phase) {
   };
 }
 
+// Gold coin turned by angle a (0 = face on): the face narrows as it spins and
+// the rim shows beside it as a darker band.
+function coin(a) {
+  return (ctx) => {
+    const cx = 12;
+    const cy = 12;
+    const r = 9.5;
+    const k = Math.max(Math.abs(Math.cos(a)), 0.14);
+    const w = k * r;
+    const rim = Math.sin(a) * Math.sign(Math.cos(a)) * 2.6; // flips side past edge-on
+    ellipse(ctx, cx + rim, cy, w, r, '#c98a12');
+    ctx.fillStyle = '#c98a12';
+    ctx.fillRect(Math.min(cx, cx + rim), cy - r, Math.abs(rim), r * 2);
+    const g = ctx.createLinearGradient(cx - w, cy - r, cx + w, cy + r);
+    g.addColorStop(0, '#fff3a6');
+    g.addColorStop(0.45, '#ffd23f');
+    g.addColorStop(1, '#f0a81e');
+    ellipse(ctx, cx, cy, w, r, g);
+    ctx.save();
+    ctx.translate(cx, cy);
+    ctx.scale(k, 1);
+    ctx.beginPath();
+    ctx.ellipse(0, 0, r * 0.72, r * 0.72, 0, 0, Math.PI * 2);
+    ctx.lineWidth = 1;
+    ctx.strokeStyle = '#d99a1e';
+    ctx.stroke();
+    star(ctx, 0, 0.3, 4.6, '#f0a81e');
+    star(ctx, -0.4, -0.2, 3.8, '#fff1a8');
+    ctx.beginPath();
+    ctx.arc(0, 0, r * 0.86, Math.PI * 1.1, Math.PI * 1.45);
+    ctx.lineWidth = 1.3;
+    ctx.strokeStyle = 'rgba(255,255,255,0.85)';
+    ctx.lineCap = 'round';
+    ctx.stroke();
+    ctx.restore();
+  };
+}
+
 function sparkle(ctx, x, y, r) {
   shape(ctx, (c) => {
     c.moveTo(x, y - r);
@@ -601,6 +639,7 @@ export function buildSprites() {
   const sheet = (frames, fw, fh, k = 1) => renderSheet(frames, fw, fh, UNIT * k);
   return {
     hero: buildHero(UNIT),
+    heroDown: buildHeroDown(UNIT),
     elder: {
       ...sheet(ELDERS.flatMap((draw) => ELDER_STEPS.map(draw)), 36, 40, ELDER_SCALE),
       anims: Object.fromEntries(ELDERS.map((_, i) => [`walk${i}`, { frames: [i * 2, i * 2 + 1], fps: 4 }])),
@@ -619,6 +658,11 @@ export function buildSprites() {
       ...sheet([coffee(0), coffee(Math.PI)], 24, 32),
       anims: { steam: { frames: [0, 1], fps: 3 } },
       body: px({ x: 3, y: 8, w: 18, h: 23 }),
+    },
+    coin: {
+      ...sheet(Array.from({ length: 8 }, (_, i) => coin((i * Math.PI) / 8)), 24, 24),
+      anims: { spin: { frames: [0, 1, 2, 3, 4, 5, 6, 7], fps: 12 } },
+      body: px({ x: 3, y: 3, w: 18, h: 18 }),
     },
     chocolate: { ...sheet([chocolate], 30, 36), body: px({ x: 4, y: 3, w: 22, h: 30 }) },
     wings: {

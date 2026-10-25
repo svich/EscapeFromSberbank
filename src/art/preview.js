@@ -50,6 +50,10 @@ for (const anim of Object.keys(sprites.hero.anims)) {
   const { w, h } = sprites.hero;
   cell(heroRow, anim, w, h, (ctx, t) => drawFrame(ctx, 'hero', frameAt('hero', anim, t), 0, 0));
 }
+for (const anim of Object.keys(sprites.heroDown.anims)) {
+  const { w, h } = sprites.heroDown;
+  cell(heroRow, anim, w, h, (ctx, t) => drawFrame(ctx, 'heroDown', frameAt('heroDown', anim, t), 0, 0));
+}
 
 const obstacleRow = document.getElementById('obstacles');
 const pickupRow = document.getElementById('pickups');
@@ -60,7 +64,8 @@ const objects = [
   [obstacleRow, 'logo', 'logo ball'],
   [obstacleRow, 'meeting', 'meeting invite', 'flap'],
   [obstacleRow, 'door', 'exit door'],
-  [pickupRow, 'coffee', 'coffee: points', 'steam'],
+  [pickupRow, 'coin', 'coin: level goal', 'spin'],
+  [pickupRow, 'coffee', 'coffee: 5 s dash', 'steam'],
   [pickupRow, 'chocolate', 'chocolate: extra life'],
 ];
 for (const [row, key, label, anim] of objects) {
@@ -85,7 +90,7 @@ function tile(ctx, img, offset, y) {
 }
 
 const ZONES = [
-  ['office', 'Zone 1: open space', [['elder', 1200, 'walk0'], ['coffee', 1650, 'steam', 700], ['chair', 2200]]],
+  ['office', 'Zone 1: open space', [['elder', 1200, 'walk0'], ['coin', 1650, 'spin', 700], ['chair', 2200]]],
   ['lobby', 'Zone 2: lobby', [['shelf', 1250], ['chocolate', 1750, null, 700], ['logo', 2300]]],
   ['street', 'Zone 3: street', [['meeting', 1300, 'flap', 640], ['coffee', 1800, 'steam', 760], ['door', 2350]]],
 ];

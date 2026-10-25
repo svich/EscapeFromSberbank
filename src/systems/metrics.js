@@ -16,7 +16,7 @@ const G = CONFIG.groundY;
 // Hitbox bottom pinned to `feet`, so the drawn soles sit on the physics floor.
 const toFeet = (b, feet) => ({ x: b.x, y: b.y, w: b.w, h: feet - b.y });
 
-function heroMetrics(def) {
+function heroMetrics(def, down) {
   const feet = def.feetY ?? def.body.y + def.body.h;
   const body = toFeet(def.body, feet);
   const slideBody = toFeet(def.slideBody ?? def.body, feet);
@@ -25,6 +25,7 @@ function heroMetrics(def) {
     frameH: def.h,
     body,
     slideBody,
+    downBody: toFeet(down.body, feet), // in the wider knocked-down frames
     feet,
     standH: body.h,
     slideH: slideBody.h,
@@ -105,16 +106,16 @@ function deriveJump() {
 }
 
 export function computeMetrics(sprites) {
-  metrics.hero = heroMetrics(sprites.hero);
+  metrics.hero = heroMetrics(sprites.hero, sprites.heroDown);
   for (const type of Object.keys(CONFIG.obstacles)) {
     if (sprites[type]) metrics.obstacles[type] = obstacleMetrics(type, sprites[type], metrics.hero);
   }
-  for (const kind of ['coffee', 'chocolate']) {
+  for (const kind of ['coin', 'coffee', 'chocolate']) {
     if (sprites[kind]) metrics.pickups[kind] = pickupMetrics(sprites[kind]);
   }
   for (const [key, def] of Object.entries(sprites)) {
     const first = Object.keys(def.anims ?? {})[0];
-    if (first && key !== 'hero') metrics.anims[key] = `${key}-${first}`;
+    if (first && !key.startsWith('hero')) metrics.anims[key] = `${key}-${first}`;
     if (def.variants) metrics.variants[key] = Object.keys(def.anims).map((name) => `${key}-${name}`);
   }
   metrics.jump = deriveJump();

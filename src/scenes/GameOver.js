@@ -72,9 +72,9 @@ export class GameOverScene extends Phaser.Scene {
     addPanel(this, 640, 300, 900, 420).setDepth(5);
     const newMark = (isNew) => (isNew ? '  НОВЫЙ!' : '');
     addStats(this, 700, 330, [
+      ['Монеты', `x${data.coins}`, '#ffd23f'],
+      ['Уровень', `${CONFIG.zones[zone].title}  ${data.levelCoins}/${CONFIG.zones[zone].coins}`],
       ['Дистанция', `${data.distance} м`],
-      ['Зона', CONFIG.zones[zone].title],
-      ['Кофе', `x${data.coffees}`, '#ffd23f'],
       ['Счёт KPI', data.score],
       ['Рекорд', `${data.best} м${newMark(data.newBest)}`, data.newBest ? '#7ee08f' : undefined],
       ['Лучший KPI', `${data.bestScore}${newMark(data.newBestScore)}`, data.newBestScore ? '#7ee08f' : undefined],

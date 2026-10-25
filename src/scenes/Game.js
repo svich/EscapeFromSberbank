@@ -8,7 +8,7 @@ import { Controls } from '../systems/Controls.js';
 import { Fairy } from '../systems/Fairy.js';
 import { Fx } from '../systems/Fx.js';
 import { metrics, pickupY } from '../systems/metrics.js';
-import { Spawner, zoneAt } from '../systems/Spawner.js';
+import { Spawner } from '../systems/Spawner.js';
 import { toggleMute } from '../ui/mute.js';
 import { addText } from '../ui/text.js';
 import { fadeIn, fadeTo } from '../ui/transitions.js';
@@ -18,6 +18,8 @@ const { FILL, MULTIPLY } = Phaser.TintModes;
 const px = (v) => v * SCALE;
 
 const songForZone = (zone) => `game-${CONFIG.zones[zone].key}`;
+// Soft pulsing halo so the power-ups read as special.
+const PICKUP_GLOW = { chocolate: 0xffc96b, coffee: 0xff9a3c };
 
 // The run. The hero stays at a fixed x while the world scrolls past;
 // obstacles and pickups are moved by hand (their Arcade bodies only detect
@@ -33,13 +35,18 @@ export class GameScene extends Phaser.Scene {
     this.cameras.main.fadeOut(0);
     this.introFrames = 3;
     this.registry.set('run.live', false);
-    this.mode = 'run'; // run | dying | exit
+    this.mode = 'run'; // run | flight | dying | exit
     this.runTime = 0;
     this.traveled = 0; // px
     this.speed = CONFIG.speed.start;
     this.motion = 1; // eases to 0 on death so the world skids to a stop
-    this.finishPx = CONFIG.finishMeters * PPM;
-    this.coffees = 0;
+    this.finishPx = Infinity; // set when the last level's coin goal opens the exit
+    this.coins = 0;
+    this.levelCoins = 0;
+    this.progress = 0; // levels done plus this level's share of its coin goal, over all levels
+    this.exitOpen = false;
+    this.dash = 0; // s of coffee dash left
+    this.dashTime = 0; // s since the coffee kicked in
     this.shield = false;
     this.shieldsUsed = 0;
     this.invuln = 0;
@@ -87,9 +94,11 @@ export class GameScene extends Phaser.Scene {
       this.fx.puffAt(this.player.x + px(8), G, 5);
     });
     this.player.on('player-dive', () => audio.sfx('slide'));
+    this.player.on('player-down', (fall) => this.onPlayerDown(fall));
 
-    this.publish('run.distance', 0);
-    this.publish('run.coffees', 0);
+    this.publish('run.coins', 0);
+    this.publish('run.goal', CONFIG.zones[0].coins);
+    this.publish('run.dash', 0);
     this.publish('run.shield', false);
     this.publish('run.progress', 0);
     this.publish('run.zone', 0);
@@ -123,16 +132,17 @@ export class GameScene extends Phaser.Scene {
 
     if (this.mode === 'run') {
       this.runTime += dt;
-      const t = Phaser.Math.Clamp(this.traveled / this.finishPx, 0, 1);
-      this.speed = Phaser.Math.Linear(CONFIG.speed.start, CONFIG.speed.end, t);
-      this.player.anims.timeScale = Phaser.Math.Clamp(this.speed / CONFIG.speed.start, 1, 1.6);
+      this.updateDash(dt);
+      const goal = CONFIG.zones[this.zone].coins;
+      this.progress = (this.zone + Math.min(1, this.levelCoins / goal)) / CONFIG.zones.length;
+      this.speed = Phaser.Math.Linear(CONFIG.speed.start, CONFIG.speed.end, this.progress) * this.dashBoost();
+      this.player.anims.timeScale = Phaser.Math.Clamp(this.speed / CONFIG.speed.start, 1, 1.8);
     }
     const scroll = this.speed * this.motion;
     this.traveled = Math.min(this.traveled + scroll * dt, this.finishPx);
     this.backdrop.update(this.traveled);
 
     if (this.mode === 'run') {
-      this.updateZone();
       this.spawner.update(this.runTime, this.speed, this.traveled);
     }
     this.moveObjects(dt, scroll);
@@ -148,17 +158,32 @@ export class GameScene extends Phaser.Scene {
 
   // --- world ---------------------------------------------------------------
 
-  // Finishing a zone flies her to the next country (Flight scene), then the
-  // run picks up in the next zone with a clear course.
-  updateZone() {
-    const zone = zoneAt(this.traveled / PPM);
-    if (zone === this.zone) return;
-    this.startFlight(this.zone, zone);
+  // Coin goal reached. Finishing a level flies her to the next country
+  // (Flight scene), then the run picks up in the next zone with a clear
+  // course; the last level opens the exit instead.
+  completeLevel() {
+    const last = this.zone === CONFIG.zones.length - 1;
+    this.fx.popText(this.player.x, this.player.body.top - px(16), last ? 'Выход открыт!' : 'Цель выполнена!', '#7ee08f');
+    if (last) this.openExit();
+    else this.startFlight(this.zone, this.zone + 1);
+  }
+
+  // Clears the way and brings the exit door in from the right edge.
+  openExit() {
+    this.exitOpen = true;
+    this.spawner.stop();
+    for (const o of this.obstacles.getChildren().slice()) {
+      if (!o.knocked && o.x > this.player.x - px(10)) this.knockAway(o);
+    }
+    const doorW = this.textures.getFrame('door', 0).width;
+    this.finishPx = this.traveled + W + doorW / 2 - CONFIG.player.x - CONFIG.exit.offset;
+    audio.sfx('zone');
   }
 
   startFlight(country, nextZone) {
     this.mode = 'flight';
     this.fairy.fold();
+    this.endDash();
     this.nextZone = nextZone;
     this.controls.enabled = false;
     this.controls.reset();
@@ -176,8 +201,9 @@ export class GameScene extends Phaser.Scene {
   // Called by the Flight scene when its photos are done.
   endFlight() {
     this.zone = this.nextZone;
+    this.levelCoins = 0;
     this.backdrop.setZone(this.zone, 0);
-    this.spawner.restart();
+    this.spawner.restart(this.runTime);
     this.mode = 'run';
     this.controls.enabled = true;
     this.controls.reset();
@@ -225,8 +251,7 @@ export class GameScene extends Phaser.Scene {
     return o;
   }
 
-  spawnPickup(kind, x, height) {
-    const type = kind === 'chocolate' && this.shield ? 'coffee' : kind;
+  spawnPickup(type, x, height) {
     const m = metrics.pickups[type];
     if (!m) return null;
     const y = pickupY(type, height);
@@ -238,11 +263,10 @@ export class GameScene extends Phaser.Scene {
     p.body.setSize(m.hitbox.w, m.hitbox.h, false);
     p.body.setOffset(m.hitbox.x, m.hitbox.y);
     if (metrics.anims[type]) p.play(metrics.anims[type]);
-    if (type === 'chocolate') {
-      // Soft pulsing halo so the chocolate reads as special.
+    if (PICKUP_GLOW[type]) {
       p.glow = this.add
         .image(x, y, 'fx-dot')
-        .setTint(0xffc96b)
+        .setTint(PICKUP_GLOW[type])
         .setScale((Math.max(m.frameW, m.frameH) * 2) / 24)
         .setDepth(10);
       p.once('destroy', () => p.glow.destroy());
@@ -294,9 +318,22 @@ export class GameScene extends Phaser.Scene {
   // --- collisions ------------------------------------------------------------
 
   hitObstacle(_player, o) {
-    if (this.mode !== 'run' || o.knocked || this.invuln > 0) return;
+    if (this.mode !== 'run' || o.knocked) return;
+    if (this.dash > 0) {
+      this.smash(o);
+      return;
+    }
+    if (this.invuln > 0) return;
     if (this.shield) this.absorbHit(o);
-    else this.die();
+    else this.die(o);
+  }
+
+  // Coffee dash: obstacles go flying instead of her.
+  smash(o) {
+    this.fx.sparkle(o.x, o.body.center.y, false, 12);
+    this.knockAway(o);
+    audio.sfx('smash');
+    this.cameras.main.shake(90, 0.004);
   }
 
   absorbHit(o) {
@@ -333,16 +370,21 @@ export class GameScene extends Phaser.Scene {
     if (this.mode !== 'run' || !p.active) return;
     const { x, y } = p;
     p.disableBody(true, true); // destroyed in moveObjects, outside the physics step
-    if (p.kind === 'coffee') {
-      this.coffees += 1;
-      audio.sfx('coffee');
+    if (p.kind === 'coin') {
+      audio.sfx('coin');
       this.fx.sparkle(x, y, false, 8);
       this.fx.popText(x, y - px(8), '+1');
+      this.addCoins(1);
+    } else if (p.kind === 'coffee') {
+      this.startDash();
+      audio.sfx('dash');
+      this.fx.sparkle(x, y, false, 18);
+      this.fx.popText(x, y - px(8), 'Кофе! Полный вперёд!', '#ff9a3c');
     } else if (this.shield) {
-      this.coffees += CONFIG.pickups.chocolateBonusCoffees;
       audio.sfx('shieldGet');
       this.fx.sparkle(x, y, true, 12);
-      this.fx.popText(x, y - px(8), `+${CONFIG.pickups.chocolateBonusCoffees} кофе`);
+      this.fx.popText(x, y - px(8), `+${CONFIG.pickups.chocolateBonusCoins} монет`);
+      this.addCoins(CONFIG.pickups.chocolateBonusCoins);
     } else {
       this.shield = true;
       audio.sfx('shieldGet');
@@ -351,12 +393,49 @@ export class GameScene extends Phaser.Scene {
     }
   }
 
+  addCoins(n) {
+    this.coins += n;
+    this.levelCoins += n;
+    if (!this.exitOpen && this.levelCoins >= CONFIG.zones[this.zone].coins) this.completeLevel();
+  }
+
+  // --- coffee dash -------------------------------------------------------------
+
+  startDash() {
+    this.dash = CONFIG.dash.time;
+    this.dashTime = 0;
+  }
+
+  updateDash(dt) {
+    if (this.dash <= 0) return;
+    this.dashTime += dt;
+    this.dash -= dt;
+    if (this.dash <= 0) this.endDash();
+  }
+
+  endDash() {
+    this.dash = 0;
+    this.player.setAlpha(1);
+  }
+
+  // Speed multiplier: eases in as the coffee kicks in, out as it wears off.
+  dashBoost() {
+    if (this.dash <= 0) return 1;
+    const { speedMul, rampIn, rampOut } = CONFIG.dash;
+    return 1 + (speedMul - 1) * Math.min(1, this.dashTime / rampIn, this.dash / rampOut);
+  }
+
   // --- player feedback -------------------------------------------------------
 
   updatePlayerFx(dt) {
     const p = this.player;
     const onFloor = p.onGround && (this.mode === 'run' || this.mode === 'exit');
-    this.fx.setDust(onFloor, p.x - px(6), G - px(1));
+    const skidding = p.downed && p.fall === 'trip' && this.motion > 0.2;
+    this.fx.setDust(onFloor || skidding, skidding ? p.body.center.x + px(6) : p.x - px(6), G - px(1));
+    const dashing = this.dash > 0 && this.mode === 'run';
+    this.fx.setDashTrail(dashing, p.body.center.x - px(4), p.body.center.y);
+    // Blinks for the last second so the end of the dash doesn't surprise.
+    if (dashing) p.setAlpha(this.dash < 1 && Math.floor(this.dash * 8) % 2 ? 0.55 : 1);
 
     this.shieldFx.setVisible(this.shield && this.mode === 'run');
     if (this.shieldFx.visible) {
@@ -381,11 +460,11 @@ export class GameScene extends Phaser.Scene {
   }
 
   publishState() {
-    const meters = this.mode === 'dying' ? this.deathMeters : Math.floor(this.traveled / PPM);
-    this.publish('run.distance', meters);
-    this.publish('run.coffees', this.coffees);
+    this.publish('run.coins', this.levelCoins);
+    this.publish('run.goal', CONFIG.zones[this.zone].coins);
     this.publish('run.shield', this.shield);
-    this.publish('run.progress', Math.round((this.traveled / this.finishPx) * 1000) / 1000);
+    this.publish('run.dash', Math.ceil((this.dash / CONFIG.dash.time) * 50) / 50);
+    this.publish('run.progress', Math.round(this.progress * 1000) / 1000);
     this.publish('run.zone', this.zone);
   }
 
@@ -411,25 +490,57 @@ export class GameScene extends Phaser.Scene {
 
   // --- endings -----------------------------------------------------------------
 
-  die() {
+  die(o) {
+    const fall = CONFIG.obstacles[o.kind]?.fall ?? 'hurt';
+    const p = this.player;
     this.mode = 'dying';
     this.fairy.fold();
     this.deathMeters = Math.floor(this.traveled / PPM);
     this.controls.enabled = false;
-    this.player.die();
+    p.die(fall);
     this.player.setAlpha(1).setTint(0xffffff).setTintMode(FILL);
     this.time.delayedCall(90, () => this.player.clearTint().setTintMode(MULTIPLY));
     audio.stopMusic(0.05);
     audio.sfx('hit');
     this.cameras.main.flash(160, 255, 255, 255);
     this.cameras.main.shake(320, 0.014);
+    if (fall === 'trip') {
+      // Carried forward over the obstacle; the floor keeps running until she lands.
+      this.tweens.add({ targets: p, x: p.x + px(12), duration: 260, ease: 'Sine.easeOut' });
+      return;
+    }
+    if (fall === 'knock') {
+      // Stopped dead by the bookcase and thrown back off it.
+      this.tweens.add({ targets: this, motion: 0, duration: 90 });
+      this.tweens.add({ targets: p, x: p.x - px(45), duration: 300, ease: 'Quad.easeOut' });
+      return;
+    }
     this.tweens.add({ targets: this, motion: 0, duration: 380, ease: 'Quad.easeOut' });
     this.time.delayedCall(CONFIG.deathDelay, () => this.finishRun(false));
+  }
+
+  // She hit the floor after a trip or knock-back.
+  onPlayerDown(fall) {
+    const p = this.player;
+    this.tweens.killTweensOf(p);
+    audio.sfx('thud');
+    this.cameras.main.shake(160, 0.008);
+    this.fx.puffAt(p.body.center.x, G, 10);
+    if (fall === 'trip') {
+      // Belly slide: the floor runs on under her and slows to a stop.
+      audio.sfx('skid');
+      this.tweens.add({ targets: this, motion: 0, duration: 750, ease: 'Quad.easeOut' });
+      this.tweens.add({ targets: p, x: p.x + px(14), duration: 750, ease: 'Quad.easeOut' });
+    } else {
+      this.tweens.add({ targets: p, x: p.x - px(6), duration: 200, ease: 'Quad.easeOut' });
+    }
+    this.time.delayedCall(CONFIG.downDelay, () => this.finishRun(false));
   }
 
   reachExit() {
     this.mode = 'exit';
     this.fairy.fold();
+    this.endDash();
     this.motion = 0;
     this.controls.enabled = false;
     this.player.exit();
@@ -450,8 +561,8 @@ export class GameScene extends Phaser.Scene {
   }
 
   finishRun(victory) {
-    const distance = victory ? CONFIG.finishMeters : this.deathMeters;
-    const score = distance + this.coffees * CONFIG.pickups.coffeeScore;
+    const distance = victory ? Math.floor(this.traveled / PPM) : this.deathMeters;
+    const score = distance + this.coins * CONFIG.pickups.coinScore;
     const prevBest = this.registry.get('best') ?? 0;
     const prevBestScore = this.registry.get('bestScore') ?? 0;
     const newBest = distance > prevBest;
@@ -466,7 +577,8 @@ export class GameScene extends Phaser.Scene {
     }
     const data = {
       distance,
-      coffees: this.coffees,
+      coins: this.coins,
+      levelCoins: this.levelCoins,
       score,
       time: this.runTime,
       zone: this.zone,

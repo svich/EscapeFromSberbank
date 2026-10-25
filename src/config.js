@@ -10,34 +10,36 @@ export const CONFIG = {
   height: px(270), // 1080
   groundY: px(230), // 920, floor top in game coordinates
   pxPerMeter: px(10),
-  finishMeters: 3000,
 
-  // World scroll speed (px/s), ramps linearly from start to end over the run.
+  // World scroll speed (px/s), ramps linearly from start to end over the run,
+  // as the levels' coin goals fill up.
   speed: { start: px(190), end: px(370) },
+
+  // Levels, in order. coins: how many to collect to finish the level.
 
   zones: [
     {
       key: 'office',
-      from: 0,
       title: 'Опенспейс',
       label: 'Офис',
       subtitle: 'Этаж 7. Сдаём квартальные KPI.',
+      coins: 35,
       weights: { elder: 5, chair: 3, meeting: 3 },
     },
     {
       key: 'lobby',
-      from: 1000,
       title: 'Холл',
       label: 'Холл',
       subtitle: 'Не смотри начальству в глаза.',
+      coins: 45,
       weights: { elder: 2, chair: 3, meeting: 3, shelf: 4 },
     },
     {
       key: 'street',
-      from: 2000,
       title: 'Улица',
       label: 'Улица',
-      subtitle: 'До свободы 1000 м. Никаких стендапов.',
+      subtitle: 'Собери на билет. Никаких стендапов.',
+      coins: 55,
       weights: { elder: 2, chair: 2, meeting: 3, logo: 4 },
     },
   ],
@@ -73,14 +75,17 @@ export const CONFIG = {
     invulnTime: 1.0, // after the shield absorbs a hit
   },
 
+  // unlockAfter: s of run time before it can show up (zone weights pick where).
   // speed: own speed toward the player on top of the scroll (px/s).
   // kind: what clears it (drives spawn gaps and pickup placement).
+  // fall: how she goes down on a hit: 'trip' onto her stomach, 'knock' back onto
+  // her bottom (default: a hurt hop).
   obstacles: {
-    elder: { unlockAt: 0, speed: px(18), kind: 'jump', hint: 'Прыгай!' },
-    chair: { unlockAt: 250, speed: px(85), kind: 'jump', hint: 'Прыгай!' },
-    meeting: { unlockAt: 550, speed: px(45), kind: 'slide', wobbleHz: 1.4, hint: 'Подкат!' },
-    shelf: { unlockAt: 1000, speed: 0, kind: 'double', hint: 'Двойной прыжок!' },
-    logo: { unlockAt: 2000, speed: px(115), kind: 'jump', hint: 'Прыгай!' },
+    elder: { unlockAfter: 0, speed: px(18), kind: 'jump', fall: 'trip', hint: 'Прыгай!' },
+    chair: { unlockAfter: 13, speed: px(85), kind: 'jump', fall: 'trip', hint: 'Прыгай!' },
+    meeting: { unlockAfter: 29, speed: px(45), kind: 'slide', wobbleHz: 1.4, hint: 'Подкат!' },
+    shelf: { unlockAfter: 0, speed: 0, kind: 'double', fall: 'knock', hint: 'Двойной прыжок!' },
+    logo: { unlockAfter: 0, speed: px(115), kind: 'jump', hint: 'Прыгай!' },
   },
 
   // Margins used when deriving jump heights from hitboxes (px).
@@ -98,9 +103,8 @@ export const CONFIG = {
     horizon: 4, // s of obstacles planned ahead
     reaction: 0.25, // s of slack always left between two obstacles
     extraStart: 1.0, // max random extra slack at the start (s) ...
-    extraEnd: 0.3, // ... easing down to this at the exit
+    extraEnd: 0.3, // ... easing down to this by the last level's goal
     introBonus: 0.8, // extra slack before an obstacle type's first appearance
-    finishRunway: 40, // m before the exit kept obstacle-free
     // How long a clear takes, as a share of the airtime: lead = before the
     // obstacle reaches the player, tail = after.
     timing: {
@@ -111,19 +115,30 @@ export const CONFIG = {
   },
 
   pickups: {
-    coffeeScore: 10,
-    lineChance: 0.6, // coffee row/arc in a free gap
-    overChance: 0.45, // coffee above a jumpable obstacle
-    underChance: 0.6, // coffee under a meeting
-    spacing: 0.13, // s between coffees in a row
+    coinScore: 10,
+    lineChance: 0.6, // coin row/arc in a free gap
+    overChance: 0.45, // coin above a jumpable obstacle
+    underChance: 0.6, // coin under a meeting
+    spacing: 0.13, // s between coins in a row
     chocolateFirstAt: 300, // m
     chocolateEvery: [500, 750], // m, random range between chocolates (extra lives)
-    chocolateBonusCoffees: 5, // when grabbed while already holding one
-    chocolateLift: px(5), // chocolate floats this far above the standing head
+    chocolateBonusCoins: 5, // when grabbed while already holding one
+    chocolateLift: px(5), // chocolate and coffee float this far above the standing head
+    coffeePerZone: 2, // dash power-ups per level, at most
+    coffeeEvery: [9, 16], // s, random wait before each one (from the level start)
+  },
+
+  // Coffee dash: faster, with a sparkle trail, smashing through obstacles.
+  dash: {
+    time: 5, // s
+    speedMul: 1.6,
+    rampIn: 0.3, // s to reach full speed
+    rampOut: 0.6, // s of slowing down at the end
   },
 
   exit: { offset: px(110) }, // door stops this far past the player at the finish
   deathDelay: 1100, // ms from the hit to the game over screen
+  downDelay: 1300, // ms from hitting the floor (trip / knock-back) to the game over screen
   fadeMs: 350,
 
   storage: {
