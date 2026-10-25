@@ -17,6 +17,10 @@ export class HUDScene extends Phaser.Scene {
   }
 
   create() {
+    // Hidden until the Game scene starts fading in (see Game introFrames).
+    // Toggling visibility, not alpha: a translucent camera renders through an
+    // extra framebuffer, which itself costs a stall the first time.
+    this.cameras.main.setVisible(false);
     this.shown = {};
     this.bannerZone = -1;
 
@@ -36,7 +40,8 @@ export class HUDScene extends Phaser.Scene {
       .setInteractive({ useHandCursor: true })
       .on('pointerdown', () => this.scene.get('Game').pauseGame());
 
-    this.banner = this.add.container(0, 0).setVisible(false);
+    // Built up front (while the run is still black) so showing one costs nothing.
+    this.banners = CONFIG.zones.map((_, i) => this.makeBanner(i));
   }
 
   drawProgressBar() {
@@ -65,6 +70,8 @@ export class HUDScene extends Phaser.Scene {
   }
 
   update(time) {
+    if (!this.registry.get('run.live')) return;
+    this.cameras.main.setVisible(true);
     const distance = this.changed('run.distance');
     if (distance !== undefined) this.distText.setText(`${distance} м`);
 
@@ -89,28 +96,35 @@ export class HUDScene extends Phaser.Scene {
     }
   }
 
-  showBanner(zoneIndex) {
+  makeBanner(zoneIndex) {
     const zone = CONFIG.zones[zoneIndex];
-    this.tweens.killTweensOf(this.banner);
-    this.banner.removeAll(true);
     const y = 270;
     const band = this.add.graphics();
     band.fillStyle(0x2b2140, 0.7).fillRoundedRect(W * 0.2, y, W * 0.6, 210, 36);
     band.lineStyle(5, 0xf27fb5, 0.9).strokeRoundedRect(W * 0.2, y, W * 0.6, 210, 36);
-    this.banner.add([
-      band,
-      addText(this, W / 2, y + 18, `Зона ${zoneIndex + 1}/${CONFIG.zones.length}`, { size: 36, color: '#f27fb5', origin: [0.5, 0] }),
-      addText(this, W / 2, y + 60, zone.title, { size: 84, weight: 700, origin: [0.5, 0] }),
-      addText(this, W / 2, y + 152, zone.subtitle, { size: 36, weight: 400, color: '#e9e4f2', origin: [0.5, 0] }),
-    ]);
-    this.banner.setVisible(true).setPosition(W, 0);
+    return this.add
+      .container(0, 0, [
+        band,
+        addText(this, W / 2, y + 18, `Зона ${zoneIndex + 1}/${CONFIG.zones.length}`, { size: 36, color: '#f27fb5', origin: [0.5, 0] }),
+        addText(this, W / 2, y + 60, zone.title, { size: 84, weight: 700, origin: [0.5, 0] }),
+        addText(this, W / 2, y + 152, zone.subtitle, { size: 36, weight: 400, color: '#e9e4f2', origin: [0.5, 0] }),
+      ])
+      .setVisible(false);
+  }
+
+  showBanner(zoneIndex) {
+    for (const b of this.banners) {
+      this.tweens.killTweensOf(b);
+      b.setVisible(false);
+    }
+    const banner = this.banners[zoneIndex].setVisible(true).setPosition(W, 0);
     this.tweens.chain({
-      targets: this.banner,
+      targets: banner,
       tweens: [
         { x: 0, duration: 420, ease: 'Back.easeOut' },
         { x: -W, duration: 340, ease: 'Quad.easeIn', delay: 1900 },
       ],
-      onComplete: () => this.banner.setVisible(false),
+      onComplete: () => banner.setVisible(false),
     });
   }
 }

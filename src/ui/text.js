@@ -31,5 +31,7 @@ export function addText(scene, x, y, text, opts = {}) {
   if (shadow) {
     style.shadow = { offsetX: 0, offsetY: Math.max(3, Math.round(size / 12)), color: 'rgba(20, 12, 32, 0.45)', blur: 6, stroke: true, fill: true };
   }
-  return scene.add.text(x, y, text, style).setOrigin(origin[0], origin[1]);
+  // Phaser re-renders a Text for each of padding and line spacing in its
+  // constructor; styling an empty string first means the real text renders once.
+  return scene.add.text(x, y, '', style).setText(text).setOrigin(origin[0], origin[1]);
 }

@@ -136,7 +136,134 @@ function grannyPassbook(step) {
   };
 }
 
-const ELDERS = [grannyTrolley, grandpaCane, grannyPassbook];
+// Veteran in a fedora with a white beard and medals on his jacket.
+function grandpaMedals(step) {
+  return (ctx) => {
+    const b = step.bob;
+    elderBody(ctx, step, '#5f6e4c');
+    for (const [x, y, c] of [[12.4, 25.4, C.gold], [15.6, 25.4, C.gold], [14, 28.6, '#d9d9e0']]) {
+      roundRect(ctx, x - 1, y - 3 + b, 2, 1.8, 0.3, '#ff8a2a', false);
+      strokePts(ctx, [[x - 0.4, y - 2.9 + b], [x - 0.4, y - 1.3 + b]], 0.4, C.lash);
+      strokePts(ctx, [[x + 0.4, y - 2.9 + b], [x + 0.4, y - 1.3 + b]], 0.4, C.lash);
+      ellipse(ctx, x, y + b, 1.2, 1.2, c);
+    }
+    elderFace(ctx, 13.6, 13.4 + b, false);
+    shape(ctx, (c) => {
+      c.moveTo(7.6, 15.6 + b);
+      c.quadraticCurveTo(12.6, 26 + b, 19.4, 16 + b);
+      c.quadraticCurveTo(13.6, 19.6 + b, 7.6, 15.6 + b);
+    }, '#ececf2');
+    ellipse(ctx, 13.6, 7.8 + b, 11, 2.2, '#6b4e3a');
+    roundRect(ctx, 7.4, 1.6 + b, 12.6, 6.6, [4, 4, 1, 1], '#6b4e3a');
+    strokePts(ctx, [[7.8, 6.6 + b], [19.6, 6.6 + b]], 1.3, '#3b2a1e');
+  };
+}
+
+// Granny with a walking frame, grey bun and a pink cardigan.
+function grannyWalker(step) {
+  return (ctx) => {
+    const b = step.bob;
+    elderBody(ctx, step, '#c77d9a');
+    const metal = '#b8bdd0';
+    capsule(ctx, [[2.6, 25 + b], [1.4, 37.6]], 1.1, metal);
+    capsule(ctx, [[7.2, 25 + b], [8.2, 37.6]], 1.1, metal);
+    capsule(ctx, [[2, 31.5], [7.8, 31.5]], 0.9, metal);
+    capsule(ctx, [[1.8, 25 + b], [8, 25 + b]], 1.3, metal);
+    ellipse(ctx, 1.4, 38.4, 1.4, 1.4, C.lash);
+    ellipse(ctx, 8.2, 38.6, 1.2, 1, '#6d6f7a');
+    capsule(ctx, [[11, 23 + b], [5.6, 25 + b]], 3, '#c77d9a');
+    ellipse(ctx, 5, 25 + b, 1.6, 1.6, C.skin);
+    ellipse(ctx, 20.6, 6.4 + b, 3.6, 3.6, '#dcdce4');
+    elderFace(ctx, 14, 13.4 + b, true);
+    shape(ctx, (c) => {
+      c.moveTo(5.8, 11.6 + b);
+      c.quadraticCurveTo(14, -0.6 + b, 22.2, 11.6 + b);
+      c.quadraticCurveTo(14, 6.4 + b, 5.8, 11.6 + b);
+    }, '#dcdce4');
+  };
+}
+
+// Granny in a fur coat and a tall fur hat, clutching utility receipts.
+function grannyFur(step) {
+  return (ctx) => {
+    const b = step.bob;
+    elderBody(ctx, step, '#7a5236');
+    for (let x = 9; x <= 21; x += 2.4) ellipse(ctx, x, 21 + b, 1.8, 1.8, '#a67c55');
+    for (const [x, y] of [[9, 27], [18, 29], [13, 31]]) ellipse(ctx, x, y + b, 0.9, 0.6, '#9a7050', false);
+    elderFace(ctx, 13.8, 13.6 + b, false);
+    ellipse(ctx, 14.2, 5.6 + b, 9.4, 5.2, '#8a6040');
+    for (const [x, y] of [[8, 4], [12, 2.4], [16.6, 2.6], [20.4, 4.6], [10.4, 7], [18, 7.2]]) ellipse(ctx, x, y + b, 1.6, 1.3, '#a67c55', false);
+    capsule(ctx, [[11, 23 + b], [7, 25.5 + b]], 3, '#7a5236');
+    for (const [dx, dy, rot] of [[0, 0, -0.15], [1.4, 1, 0.1]]) {
+      ctx.save();
+      ctx.translate(4.6 + dx, 24.6 + b + dy);
+      ctx.rotate(rot);
+      roundRect(ctx, -3, -4, 6, 7.6, 0.6, C.paper);
+      for (const ly of [-2, -0.4, 1.2]) strokePts(ctx, [[-1.8, ly], [1.8, ly]], 0.4, C.line);
+      ctx.restore();
+    }
+    ellipse(ctx, 7, 25.6 + b, 1.6, 1.6, C.skin);
+  };
+}
+
+// Sporty grandpa doing Nordic walking: bobble hat, shades, two poles.
+function grandpaNordic(step) {
+  return (ctx) => {
+    const b = step.bob;
+    const pole = '#4b5068';
+    capsule(ctx, [[19.4, 25 + b], [25.6, 38.6]], 0.9, pole);
+    elderBody(ctx, step, '#3d7bd9');
+    strokePts(ctx, [[8, 26.5 + b], [22, 26.5 + b]], 1.6, '#ff9a3c');
+    capsule(ctx, [[7.4, 25 + b], [2.6, 38.6]], 0.9, pole);
+    capsule(ctx, [[11, 22.5 + b], [7.6, 25.2 + b]], 3, '#3d7bd9');
+    ellipse(ctx, 7.4, 25.2 + b, 1.6, 1.6, C.skin);
+    elderFace(ctx, 13.6, 13.4 + b, true);
+    for (const ex of [10, 15.2]) ellipse(ctx, ex, 14 + b, 2.3, 2, 'rgba(40,30,50,0.85)', false);
+    ctx.beginPath();
+    ctx.arc(13.6, 11.2 + b, 8.8, Math.PI * 1.02, Math.PI * 1.98);
+    ctx.closePath();
+    ctx.fillStyle = '#e07a3c';
+    ctx.fill();
+    ctx.lineWidth = OW;
+    ctx.strokeStyle = C.outline;
+    ctx.stroke();
+    strokePts(ctx, [[5.4, 9.8 + b], [21.8, 9.8 + b]], 1.6, '#f2f2f6');
+    ellipse(ctx, 13.6, 1.8 + b, 2.2, 2.2, '#f2f2f6');
+  };
+}
+
+// Grandpa in an ushanka with a string bag: a baton and a bottle of kefir.
+function grandpaUshanka(step) {
+  return (ctx) => {
+    const b = step.bob;
+    elderBody(ctx, step, '#55606f');
+    elderFace(ctx, 13.6, 13.4 + b, false);
+    ellipse(ctx, 11.4, 16.8 + b, 1.3, 1, '#ff7a7a', false);
+    for (const x of [5.2, 19.4]) roundRect(ctx, x, 9 + b, 3.6, 8.4, 1.6, '#5a4a3a');
+    ellipse(ctx, 13.8, 6.4 + b, 9.4, 4.8, '#5a4a3a');
+    roundRect(ctx, 5.4, 6.6 + b, 16.8, 3.6, 1.8, '#7a6450');
+    // String bag hanging from the front hand.
+    capsule(ctx, [[11, 23 + b], [7, 26 + b]], 3, '#55606f');
+    ellipse(ctx, 2.6, 26.6 + b, 1.6, 4.6, '#d9a35a');
+    roundRect(ctx, 4.2, 26.4 + b, 3, 6.2, 0.8, C.white);
+    roundRect(ctx, 4.6, 25.4 + b, 2.2, 1.4, 0.4, C.green, false);
+    ctx.beginPath();
+    ctx.moveTo(6.6, 25.6 + b);
+    ctx.lineTo(0.8, 29 + b);
+    ctx.lineTo(2.4, 34.6 + b);
+    ctx.lineTo(7.6, 34.6 + b);
+    ctx.lineTo(8.4, 29 + b);
+    ctx.closePath();
+    ctx.lineWidth = 0.5;
+    ctx.strokeStyle = '#3b2f2a';
+    ctx.stroke();
+    for (let i = 0; i < 4; i++) strokePts(ctx, [[1.2 + i * 1.8, 29 + b], [3 + i * 1.6, 34.4 + b]], 0.4, '#3b2f2a');
+    strokePts(ctx, [[1.4, 31.6 + b], [8, 31.6 + b]], 0.4, '#3b2f2a');
+    ellipse(ctx, 7, 26 + b, 1.6, 1.6, C.skin);
+  };
+}
+
+const ELDERS = [grannyTrolley, grandpaCane, grannyPassbook, grandpaMedals, grannyWalker, grannyFur, grandpaNordic, grandpaUshanka];
 
 function chair(ctx) {
   for (const x of [4, 24]) capsule(ctx, [[14, 33], [x, 37]], 2, C.suitShade);
@@ -436,7 +563,7 @@ export function buildSprites() {
     hero: buildHero(UNIT),
     elder: {
       ...sheet(ELDERS.flatMap((draw) => ELDER_STEPS.map(draw)), 36, 40, ELDER_SCALE),
-      anims: { walk0: { frames: [0, 1], fps: 4 }, walk1: { frames: [2, 3], fps: 4 }, walk2: { frames: [4, 5], fps: 4 } },
+      anims: Object.fromEntries(ELDERS.map((_, i) => [`walk${i}`, { frames: [i * 2, i * 2 + 1], fps: 4 }])),
       variants: true,
       body: toPx(UNIT * ELDER_SCALE)({ x: 5, y: 4, w: 24, h: 35 }),
     },

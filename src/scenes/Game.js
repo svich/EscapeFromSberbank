@@ -27,7 +27,11 @@ export class GameScene extends Phaser.Scene {
   }
 
   create() {
-    fadeIn(this);
+    // Creating the run (text textures, first draws) stalls for a few frames,
+    // so stay black until that has passed, then fade in and start the clock.
+    this.cameras.main.fadeOut(0);
+    this.introFrames = 3;
+    this.registry.set('run.live', false);
     this.mode = 'run'; // run | dying | exit
     this.runTime = 0;
     this.traveled = 0; // px
@@ -100,6 +104,14 @@ export class GameScene extends Phaser.Scene {
   }
 
   update(_time, delta) {
+    if (this.introFrames > 0) {
+      this.introFrames -= 1;
+      if (this.introFrames === 0) {
+        fadeIn(this);
+        this.registry.set('run.live', true);
+      }
+      return;
+    }
     const dt = Math.min(delta, 50) / 1000;
 
     if (this.mode === 'run') {
