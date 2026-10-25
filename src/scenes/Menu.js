@@ -75,7 +75,7 @@ export class MenuScene extends Phaser.Scene {
   startGame() {
     if (this.leaving) return;
     audio.sfx('select');
-    fadeTo(this, 'Game');
+    fadeTo(this, 'Game', {}); // a new run: {} replaces a retried level's checkpoint
   }
 
   update(_time, delta) {

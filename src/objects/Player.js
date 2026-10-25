@@ -180,6 +180,13 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
     this.rising = false;
   }
 
+  // Running again after walking out through a level's door.
+  reenter(x) {
+    this.mode = 'run';
+    this.x = x;
+    this.setAlpha(1);
+  }
+
   updateAnim(onGround) {
     let key;
     if (this.mode === 'dead') key = this.deadAnim;

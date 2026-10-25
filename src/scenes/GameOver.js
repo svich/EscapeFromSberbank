@@ -28,12 +28,14 @@ export function addStats(scene, x, y, rows) {
 }
 
 // Shared by GameOver and Victory: R/Space/Enter or tap retries, M/Esc menu.
-export function bindEndInputs(scene) {
+// retry: Game scene data to start from (a level checkpoint), {} for a new run.
+// Always pass an object: Phaser reuses the last start's data when given none.
+export function bindEndInputs(scene, retry = {}) {
   const readyAt = performance.now() + 450; // swallow mashing from the run
   const go = (key) => {
     if (performance.now() < readyAt) return;
     audio.sfx('select');
-    fadeTo(scene, key);
+    fadeTo(scene, key, key === 'Game' ? retry : undefined);
   };
   scene.input.keyboard.on('keydown', (e) => {
     if (e.code === 'KeyR' || e.code === 'Space' || e.code === 'Enter') go('Game');
@@ -80,11 +82,11 @@ export class GameOverScene extends Phaser.Scene {
       ['Лучший KPI', `${data.bestScore}${newMark(data.newBestScore)}`, data.newBestScore ? '#7ee08f' : undefined],
     ]);
 
-    const prompt = addText(this, W / 2, 760, 'R / Пробел / тап  —  ещё раз', { size: 48, weight: 700, color: '#7ee08f', origin: [0.5, 0] }).setDepth(6);
+    const prompt = addText(this, W / 2, 760, `R / Пробел / тап  —  заново «${CONFIG.zones[zone].title}»`, { size: 48, weight: 700, color: '#7ee08f', origin: [0.5, 0] }).setDepth(6);
     addText(this, W / 2, 830, 'M / Esc  —  меню', { size: 36, origin: [0.5, 0] }).setDepth(6);
     this.tweens.add({ targets: prompt, alpha: 0.35, duration: 650, yoyo: true, repeat: -1, ease: 'Sine.easeInOut' });
 
-    bindEndInputs(this);
+    bindEndInputs(this, data.retry);
     audio.playMusic('gameover');
   }
 }

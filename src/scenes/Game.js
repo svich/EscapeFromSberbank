@@ -29,28 +29,30 @@ export class GameScene extends Phaser.Scene {
     super('Game');
   }
 
-  create() {
+  // from: a checkpoint (see checkpoint()) to retry a level from; empty for a new run.
+  create(from = {}) {
     // Creating the run (text textures, first draws) stalls for a few frames,
     // so stay black until that has passed, then fade in and start the clock.
     this.cameras.main.fadeOut(0);
     this.introFrames = 3;
     this.registry.set('run.live', false);
     this.mode = 'run'; // run | flight | dying | exit
-    this.runTime = 0;
-    this.traveled = 0; // px
+    this.runTime = from.time ?? 0;
+    this.traveled = from.traveled ?? 0; // px
     this.speed = CONFIG.speed.start;
     this.motion = 1; // eases to 0 on death so the world skids to a stop
     this.finishPx = Infinity; // set when the last level's coin goal opens the exit
-    this.coins = 0;
+    this.coins = from.coins ?? 0;
     this.levelCoins = 0;
     this.progress = 0; // levels done plus this level's share of its coin goal, over all levels
     this.exitOpen = false;
     this.dash = 0; // s of coffee dash left
     this.dashTime = 0; // s since the coffee kicked in
-    this.shield = false;
-    this.shieldsUsed = 0;
+    this.shield = from.shield ?? false;
+    this.shieldsUsed = from.shieldsUsed ?? 0;
     this.invuln = 0;
-    this.zone = 0;
+    this.zone = from.zone ?? 0;
+    this.levelStart = this.checkpoint();
     this.deathMeters = 0;
     this.door = null;
     this.pausing = false;
@@ -60,7 +62,7 @@ export class GameScene extends Phaser.Scene {
     // Only the floor collides: world bounds bottom = ground.
     this.physics.world.setBounds(0, -H, W, G + H, false, false, false, true);
 
-    this.backdrop = new Backdrop(this, 0);
+    this.backdrop = new Backdrop(this, this.zone);
     this.obstacles = this.physics.add.group({ allowGravity: false, immovable: true });
     this.pickups = this.physics.add.group({ allowGravity: false, immovable: true });
     this.player = new Player(this, CONFIG.player.x).setDepth(20);
@@ -97,11 +99,11 @@ export class GameScene extends Phaser.Scene {
     this.player.on('player-down', (fall) => this.onPlayerDown(fall));
 
     this.publish('run.coins', 0);
-    this.publish('run.goal', CONFIG.zones[0].coins);
+    this.publish('run.goal', CONFIG.zones[this.zone].coins);
     this.publish('run.dash', 0);
-    this.publish('run.shield', false);
+    this.publish('run.shield', this.shield);
     this.publish('run.progress', 0);
-    this.publish('run.zone', 0);
+    this.publish('run.zone', this.zone);
     this.scene.launch('HUD');
 
     // Pause on Esc/P, on HUD button, and when the tab or window loses focus.
@@ -116,7 +118,7 @@ export class GameScene extends Phaser.Scene {
       this.game.events.off(Phaser.Core.Events.BLUR, onFocusLost);
     });
 
-    audio.playMusic(songForZone(0));
+    audio.playMusic(songForZone(this.zone));
   }
 
   update(_time, delta) {
@@ -158,14 +160,13 @@ export class GameScene extends Phaser.Scene {
 
   // --- world ---------------------------------------------------------------
 
-  // Coin goal reached. Finishing a level flies her to the next country
-  // (Flight scene), then the run picks up in the next zone with a clear
-  // course; the last level opens the exit instead.
+  // Coin goal reached: the exit door comes in. Walking through it ends the
+  // level (see reachExit): indoors she sets off for the next country, the
+  // last door is freedom.
   completeLevel() {
     const last = this.zone === CONFIG.zones.length - 1;
     this.fx.popText(this.player.x, this.player.body.top - px(16), last ? 'Выход открыт!' : 'Цель выполнена!', '#7ee08f');
-    if (last) this.openExit();
-    else this.startFlight(this.zone, this.zone + 1);
+    this.openExit();
   }
 
   // Clears the way and brings the exit door in from the right edge.
@@ -198,10 +199,29 @@ export class GameScene extends Phaser.Scene {
     cam.fadeOut(CONFIG.fadeMs);
   }
 
+  // Through an indoor level's door: a big send-off with the world stopped,
+  // then the flight (Flight scene) and the next zone with a clear course.
+  setOff() {
+    this.sendOff = addText(this, W / 2, H * 0.42, 'В путь!', { size: 220, weight: 800, color: '#ffd23f', origin: [0.5, 0.5] })
+      .setDepth(40)
+      .setScale(0.3);
+    this.tweens.add({ targets: this.sendOff, scale: 1, duration: 450, ease: 'Back.easeOut' });
+    this.time.delayedCall(1400, () => this.startFlight(this.zone, this.zone + 1));
+  }
+
   // Called by the Flight scene when its photos are done.
   endFlight() {
+    // Back in through the next level's door.
+    this.sendOff.destroy();
+    this.door.destroy();
+    this.door = null;
+    this.exitOpen = false;
+    this.finishPx = Infinity;
+    this.motion = 1;
+    this.player.reenter(CONFIG.player.x);
     this.zone = this.nextZone;
     this.levelCoins = 0;
+    this.levelStart = this.checkpoint();
     this.backdrop.setZone(this.zone, 0);
     this.spawner.restart(this.runTime);
     this.mode = 'run';
@@ -211,6 +231,12 @@ export class GameScene extends Phaser.Scene {
     this.scene.resume('HUD');
     fadeIn(this);
     audio.playMusic(songForZone(this.zone));
+  }
+
+  // What a retry of the current level starts with.
+  checkpoint() {
+    const { zone, coins, shield, shieldsUsed, traveled, runTime: time } = this;
+    return { zone, coins, shield, shieldsUsed, traveled, time };
   }
 
   clearCourse() {
@@ -555,7 +581,8 @@ export class GameScene extends Phaser.Scene {
       ease: 'Sine.easeInOut',
       onComplete: () => {
         audio.sfx('door');
-        this.tweens.add({ targets: this.player, alpha: 0, duration: 300, onComplete: () => this.finishRun(true) });
+        const last = this.zone === CONFIG.zones.length - 1;
+        this.tweens.add({ targets: this.player, alpha: 0, duration: 300, onComplete: () => (last ? this.finishRun(true) : this.setOff()) });
       },
     });
   }
@@ -587,6 +614,7 @@ export class GameScene extends Phaser.Scene {
       bestScore: Math.max(prevBestScore, score),
       newBest,
       newBestScore,
+      retry: this.levelStart,
     };
     // The last level ends with a flight to the last country, then the
     // congratulations screen.

@@ -13,17 +13,19 @@ const randRange = ([lo, hi]) => lo + Math.random() * (hi - lo);
 // early enough (given its own speed and the scroll) to arrive on schedule.
 // Gaps are lead/tail of each clear plus reaction slack, so every pattern is
 // clearable at any speed and fast objects never overtake slow ones.
-// Reads the level and run progress from the scene (zone, progress).
+// Reads the level and run progress from the scene (zone, progress), and where
+// the run starts (runTime, traveled: a retried level starts mid-run).
 export class Spawner {
   constructor(scene) {
     this.scene = scene;
     this.queue = []; // { kind: 'obstacle' | 'coin' | 'coffee' | 'chocolate', type?, arrival, height?, intro? }
     this.last = null; // last planned obstacle { type, arrival }
-    this.introduced = new Set();
+    // Types met on earlier levels get no hint again.
+    this.introduced = new Set(CONFIG.zones.slice(0, scene.zone).flatMap((z) => Object.keys(z.weights)));
     this.recent = [];
-    this.nextChocolateAt = PK.chocolateFirstAt;
+    this.nextChocolateAt = scene.traveled / PPM + PK.chocolateFirstAt;
     this.coffeeLeft = PK.coffeePerZone;
-    this.nextCoffeeAt = randRange(PK.coffeeEvery);
+    this.nextCoffeeAt = scene.runTime + randRange(PK.coffeeEvery);
     this.done = false; // no more obstacles or pickups: the exit is open
     // Spawn line: off screen even for the widest sprite.
     const widest = Math.max(
@@ -41,6 +43,7 @@ export class Spawner {
     this.recent = [];
     this.coffeeLeft = PK.coffeePerZone;
     this.nextCoffeeAt = now + randRange(PK.coffeeEvery);
+    this.done = false;
   }
 
   stop() {
