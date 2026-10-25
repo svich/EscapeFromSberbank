@@ -8,6 +8,7 @@ export const metrics = {
   pickups: {},
   jump: null,
   anims: {}, // sprite key -> its first (looping) animation key
+  variants: {}, // sprite key -> animation keys to pick from at random
 };
 
 const G = CONFIG.groundY;
@@ -83,7 +84,7 @@ function deriveJump() {
   const P = CONFIG.player;
   const M = CONFIG.jumpMargins;
   const o = metrics.obstacles;
-  const lows = ['papers', 'chair', 'logo'].filter((t) => o[t]).map((t) => o[t].top);
+  const lows = ['elder', 'chair', 'logo'].filter((t) => o[t]).map((t) => o[t].top);
   const low = lows.length ? Math.max(...lows) : M.minAir;
   const tall = o.manager ? o.manager.top : low + 2 * M.overLow;
 
@@ -114,6 +115,7 @@ export function computeMetrics(sprites) {
   for (const [key, def] of Object.entries(sprites)) {
     const first = Object.keys(def.anims ?? {})[0];
     if (first && key !== 'hero') metrics.anims[key] = `${key}-${first}`;
+    if (def.variants) metrics.variants[key] = Object.keys(def.anims).map((name) => `${key}-${name}`);
   }
   metrics.jump = deriveJump();
   if (import.meta.env?.DEV) {

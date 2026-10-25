@@ -54,7 +54,7 @@ for (const anim of Object.keys(sprites.hero.anims)) {
 const obstacleRow = document.getElementById('obstacles');
 const pickupRow = document.getElementById('pickups');
 const objects = [
-  [obstacleRow, 'papers', 'TPS reports'],
+  [obstacleRow, 'elder', 'grannies & grandpa', 'walk0'],
   [obstacleRow, 'chair', 'office chair'],
   [obstacleRow, 'manager', 'manager', 'walk'],
   [obstacleRow, 'logo', 'logo ball'],
@@ -85,7 +85,7 @@ function tile(ctx, img, offset, y) {
 }
 
 const ZONES = [
-  ['office', 'Zone 1: open space', [['papers', 1200], ['coffee', 1650, 'steam', 700], ['chair', 2200]]],
+  ['office', 'Zone 1: open space', [['elder', 1200, 'walk0'], ['coffee', 1650, 'steam', 700], ['chair', 2200]]],
   ['lobby', 'Zone 2: lobby', [['manager', 1250, 'walk'], ['offer', 1750, null, 700], ['logo', 2300]]],
   ['street', 'Zone 3: street', [['meeting', 1300, 'flap', 640], ['coffee', 1800, 'steam', 760], ['door', 2350]]],
 ];

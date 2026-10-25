@@ -51,7 +51,7 @@ export class BootScene extends Phaser.Scene {
         key: animKey,
         frames: anim.frames.map((frame) => ({ key, frame })),
         frameRate: anim.fps,
-        repeat: LOOPING.has(name) ? -1 : 0,
+        repeat: LOOPING.has(name.replace(/\d+$/, '')) ? -1 : 0,
       });
     }
   }

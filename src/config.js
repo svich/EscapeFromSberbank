@@ -22,7 +22,7 @@ export const CONFIG = {
       title: 'Опенспейс',
       label: 'Офис',
       subtitle: 'Этаж 7. Сдаём квартальные KPI.',
-      weights: { papers: 5, chair: 3, meeting: 3 },
+      weights: { elder: 5, chair: 3, meeting: 3 },
     },
     {
       key: 'lobby',
@@ -30,7 +30,7 @@ export const CONFIG = {
       title: 'Холл',
       label: 'Холл',
       subtitle: 'Не смотри начальству в глаза.',
-      weights: { papers: 2, chair: 3, meeting: 3, manager: 4 },
+      weights: { elder: 2, chair: 3, meeting: 3, manager: 4 },
     },
     {
       key: 'street',
@@ -38,7 +38,7 @@ export const CONFIG = {
       title: 'Улица',
       label: 'Улица',
       subtitle: 'До свободы 1000 м. Никаких стендапов.',
-      weights: { papers: 2, chair: 2, meeting: 3, manager: 3, logo: 4 },
+      weights: { elder: 2, chair: 2, meeting: 3, manager: 3, logo: 4 },
     },
   ],
 
@@ -51,7 +51,7 @@ export const CONFIG = {
     fallGravityMul: 1.35, // heavier on the way down, snappier arcs
     maxFall: px(800),
     // Jump heights in px. null = derived from obstacle hitboxes at boot:
-    // the ground jump clears papers/chair/logo but not the manager, the air
+    // the ground jump clears elder/chair/logo but not the manager, the air
     // jump adds enough to get over the manager.
     jumpApex: null,
     doubleJumpHeight: null,
@@ -68,7 +68,7 @@ export const CONFIG = {
   // speed: own speed toward the player on top of the scroll (px/s).
   // kind: what clears it (drives spawn gaps and pickup placement).
   obstacles: {
-    papers: { unlockAt: 0, speed: 0, kind: 'jump', hint: 'Прыгай!' },
+    elder: { unlockAt: 0, speed: px(18), kind: 'jump', hint: 'Прыгай!' },
     chair: { unlockAt: 250, speed: px(85), kind: 'jump', hint: 'Прыгай!' },
     meeting: { unlockAt: 550, speed: px(45), kind: 'slide', wobbleHz: 1.4, hint: 'Подкат!' },
     manager: { unlockAt: 1000, speed: px(30), kind: 'double', hint: 'Двойной прыжок!' },
@@ -77,7 +77,7 @@ export const CONFIG = {
 
   // Margins used when deriving jump heights from hitboxes (px).
   jumpMargins: {
-    overLow: px(14), // ground jump apex above the tallest low obstacle
+    overLow: px(30), // ground jump apex above the tallest low obstacle
     underTall: px(4), // ...but this far below the manager's top
     minClear: px(6), // never less than this over low obstacles
     overTall: px(12), // air jump clears the manager by this, from half apex

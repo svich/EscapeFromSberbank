@@ -157,7 +157,9 @@ export class GameScene extends Phaser.Scene {
       o.body.setSize(m.hitbox.w, m.hitbox.h, false);
       o.body.setOffset(m.hitbox.x, m.hitbox.y);
     }
-    if (metrics.anims[type]) o.play(metrics.anims[type]);
+    const variants = metrics.variants[type];
+    if (variants) o.play(Phaser.Utils.Array.GetRandom(variants));
+    else if (metrics.anims[type]) o.play(metrics.anims[type]);
 
     // First appearance of a type: tell the player what to do.
     if (intro && cfg.hint) {

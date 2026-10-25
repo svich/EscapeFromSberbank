@@ -6,23 +6,137 @@ import { C, OW, capsule, ellipse, renderSheet, roundRect, shape, strokePts, text
 import { buildHero } from './hero.js';
 
 export const UNIT = 2.75;
+// Elders stand a touch shorter than the hero; the manager towers over both.
+const ELDER_SCALE = 1.65;
+const MANAGER_SCALE = 1.35;
 
 // --- Obstacles ---------------------------------------------------------------
 
-function papers(ctx) {
-  roundRect(ctx, 2, 18, 27, 8.5, 1.6, C.paper);
-  for (const y of [20.6, 22.6, 24.4]) strokePts(ctx, [[3.5, y], [27.5, y]], 0.5, C.paperShade);
-  roundRect(ctx, 4.5, 10.5, 25, 8.5, 1.6, C.paper);
-  for (const y of [13, 15, 16.8]) strokePts(ctx, [[6, y], [28, y]], 0.5, C.paperShade);
-  ctx.save();
-  ctx.translate(16, 7);
-  ctx.rotate(-0.07);
-  roundRect(ctx, -13.5, -4.5, 25, 8.5, 1.6, C.paper);
-  for (const y of [-2.2, -0.2, 1.8]) strokePts(ctx, [[-11, y], [2, y]], 0.6, C.line);
-  roundRect(ctx, 3.5, -3.2, 7.4, 6, 1.2, C.red, false);
-  text(ctx, 'KPI', 7.2, -0.1, 3.6, C.white);
-  ctx.restore();
+// Elderly people from the bank queue, shuffling toward the player (facing
+// left). Three variants, two waddle steps each. Short enough to jump over.
+const ELDER_STEPS = [
+  { front: [11, 36.6], back: [18, 36.6], bob: 0 },
+  { front: [13.5, 36.6], back: [16, 36.6], bob: -0.6 },
+];
+
+function elderBody(ctx, { front, back, bob }, coat) {
+  for (const [hip, foot, shade] of [[[17, 31 + bob], back, true], [[13, 31 + bob], front, false]]) {
+    capsule(ctx, [hip, foot], 3.2, shade ? '#a8876f' : '#c9a68c');
+    ellipse(ctx, foot[0] - 1, foot[1] + 1.3, 2.7, 1.5, '#3b2f2a');
+  }
+  shape(ctx, (c) => {
+    c.moveTo(9.5, 21 + bob);
+    c.quadraticCurveTo(15, 18.5 + bob, 20.5, 21 + bob);
+    c.lineTo(23, 32 + bob);
+    c.quadraticCurveTo(15, 35 + bob, 7, 32 + bob);
+  }, coat);
+  for (const y of [25, 28.5]) ellipse(ctx, 10.5, y + bob, 0.6, 0.6, C.lash, false);
 }
+
+function elderFace(ctx, x, y, glasses) {
+  ellipse(ctx, x, y, 8.6, 8.6, C.skin);
+  for (const ex of [x - 3.6, x + 1.6]) {
+    if (glasses) {
+      ellipse(ctx, ex, y + 0.6, 2.5, 2.3, 'rgba(207,234,255,0.6)', false);
+      ctx.beginPath();
+      ctx.ellipse(ex, y + 0.6, 2.5, 2.3, 0, 0, Math.PI * 2);
+      ctx.lineWidth = 0.8;
+      ctx.strokeStyle = C.lash;
+      ctx.stroke();
+    }
+    ctx.beginPath();
+    ctx.ellipse(ex, y + 1.2, 1.3, 0.9, 0, Math.PI * 1.1, Math.PI * 1.9);
+    ctx.lineWidth = 0.8;
+    ctx.strokeStyle = C.lash;
+    ctx.lineCap = 'round';
+    ctx.stroke();
+  }
+  if (glasses) strokePts(ctx, [[x - 1.1, y + 0.4], [x - 0.9, y + 0.4]], 0.8, C.lash);
+  for (const bx of [x - 5.6, x + 3.6]) ellipse(ctx, bx, y + 3.4, 1.6, 1, 'rgba(255,120,130,0.45)', false);
+  ctx.beginPath();
+  ctx.moveTo(x - 2.8, y + 4.6);
+  ctx.quadraticCurveTo(x - 1.2, y + 5.8, x + 0.4, y + 4.6);
+  ctx.lineWidth = 0.8;
+  ctx.strokeStyle = C.lips;
+  ctx.stroke();
+  strokePts(ctx, [[x - 6.4, y - 0.6], [x - 5.6, y + 0.4]], 0.5, C.skinShade);
+}
+
+// Granny in a polka-dot headscarf pulling a checked shopping trolley.
+function grannyTrolley(step) {
+  return (ctx) => {
+    const b = step.bob;
+    roundRect(ctx, 24, 21 + b, 10, 13.5, 2, '#c94b4b');
+    ctx.fillStyle = 'rgba(47,78,143,0.55)';
+    for (const x of [26.5, 30.5]) ctx.fillRect(x, 21.4 + b, 1.6, 12.7);
+    for (const y of [24.5, 29]) ctx.fillRect(24.4, y + b, 9.2, 1.6);
+    capsule(ctx, [[29, 21 + b], [26.5, 16 + b]], 1, C.gray);
+    for (const x of [26, 32]) ellipse(ctx, x, 36.8, 2.2, 2.2, C.lash);
+    elderBody(ctx, step, '#7a5c8a');
+    capsule(ctx, [[19, 23 + b], [25, 17.5 + b]], 3, '#7a5c8a');
+    ellipse(ctx, 25.6, 17 + b, 1.6, 1.6, C.skin);
+    ellipse(ctx, 15, 12 + b, 9.8, 9.8, '#d84a5a');
+    for (const [dx, dy] of [[-5, -5], [1, -7], [6, -3], [7, 3], [-7, 1]]) ellipse(ctx, 15 + dx, 12 + b + dy, 0.9, 0.9, C.white, false);
+    shape(ctx, (c) => {
+      c.moveTo(18, 20 + b);
+      c.lineTo(23, 22.5 + b);
+      c.lineTo(20.5, 18.5 + b);
+    }, '#d84a5a');
+    elderFace(ctx, 13.6, 13.4 + b, false);
+    shape(ctx, (c) => {
+      c.moveTo(6.5, 9.5 + b);
+      c.quadraticCurveTo(13.6, 4 + b, 20.6, 9.5 + b);
+      c.quadraticCurveTo(13.6, 7.2 + b, 6.5, 9.5 + b);
+    }, '#dcdce4', false);
+  };
+}
+
+// Grandpa in a flat cap with a walking cane and a grey moustache.
+function grandpaCane(step) {
+  return (ctx) => {
+    const b = step.bob;
+    elderBody(ctx, step, '#6b5a46');
+    capsule(ctx, [[5.6, 25 + b], [4.6, 38.6]], 1.3, '#8a5a3a');
+    capsule(ctx, [[5.6, 25 + b], [7.6, 24 + b]], 1.3, '#8a5a3a');
+    capsule(ctx, [[11, 22.5 + b], [7, 25.5 + b]], 3, '#6b5a46');
+    ellipse(ctx, 6.6, 25.4 + b, 1.6, 1.6, C.skin);
+    for (const [x, y] of [[21, 12], [21.6, 15.5]]) ellipse(ctx, x, y + b, 2, 2, '#dcdce4');
+    elderFace(ctx, 13.6, 13.4 + b, true);
+    shape(ctx, (c) => {
+      c.moveTo(9.4, 17 + b);
+      c.quadraticCurveTo(12.4, 15.4 + b, 14.6, 17 + b);
+      c.quadraticCurveTo(12, 19.2 + b, 9.4, 17 + b);
+    }, '#e8e8ee');
+    ellipse(ctx, 14.6, 6.6 + b, 8.6, 3.6, '#6d6f7a');
+    ellipse(ctx, 6.6, 8.4 + b, 4.4, 1.5, '#5a5c66');
+    ellipse(ctx, 15, 3.4 + b, 1, 0.8, '#5a5c66', false);
+  };
+}
+
+// Granny in a beret holding up her savings passbook, handbag on the arm.
+function grannyPassbook(step) {
+  return (ctx) => {
+    const b = step.bob;
+    elderBody(ctx, step, '#3f8f8a');
+    roundRect(ctx, 19.5, 26.5 + b, 7.4, 6, 1.6, '#4b3a2a');
+    ctx.beginPath();
+    ctx.arc(23.2, 26.8 + b, 2.4, Math.PI, 0);
+    ctx.lineWidth = 0.9;
+    ctx.strokeStyle = C.lash;
+    ctx.stroke();
+    for (const [x, y] of [[6.2, 11], [6, 15], [22.4, 11], [22.6, 15], [8.6, 7.6], [20, 7.6]]) ellipse(ctx, x, y + b, 2.3, 2.3, '#dcdce4');
+    elderFace(ctx, 14, 13.4 + b, true);
+    ellipse(ctx, 15, 5.6 + b, 8, 3, '#8e3a6e');
+    ellipse(ctx, 15.6, 2.6 + b, 0.9, 0.9, '#8e3a6e');
+    capsule(ctx, [[11, 22.5 + b], [7.6, 21.5 + b]], 3, '#3f8f8a');
+    roundRect(ctx, 1.2, 15.5 + b, 7.2, 9.4, 1, C.green);
+    strokePts(ctx, [[2.6, 18.2 + b], [7, 18.2 + b]], 0.7, C.gold);
+    roundRect(ctx, 2.8, 20 + b, 4, 2.4, 0.5, C.white, false);
+    ellipse(ctx, 7.6, 21.6 + b, 1.6, 1.6, C.skin);
+  };
+}
+
+const ELDERS = [grannyTrolley, grandpaCane, grannyPassbook];
 
 function chair(ctx) {
   for (const x of [4, 24]) capsule(ctx, [[14, 33], [x, 37]], 2, C.suitShade);
@@ -317,15 +431,20 @@ function door(ctx) {
 
 export function buildSprites() {
   const px = toPx(UNIT);
-  const sheet = (frames, fw, fh) => renderSheet(frames, fw, fh, UNIT);
+  const sheet = (frames, fw, fh, k = 1) => renderSheet(frames, fw, fh, UNIT * k);
   return {
     hero: buildHero(UNIT),
-    papers: { ...sheet([papers], 32, 28), body: px({ x: 2, y: 3, w: 27, h: 24 }) },
+    elder: {
+      ...sheet(ELDERS.flatMap((draw) => ELDER_STEPS.map(draw)), 36, 40, ELDER_SCALE),
+      anims: { walk0: { frames: [0, 1], fps: 4 }, walk1: { frames: [2, 3], fps: 4 }, walk2: { frames: [4, 5], fps: 4 } },
+      variants: true,
+      body: toPx(UNIT * ELDER_SCALE)({ x: 5, y: 4, w: 24, h: 35 }),
+    },
     chair: { ...sheet([chair], 28, 42), body: px({ x: 3, y: 2, w: 22, h: 39 }) },
     manager: {
-      ...sheet(MANAGER_WALK.map(manager), 56, 89),
+      ...sheet(MANAGER_WALK.map(manager), 56, 89, MANAGER_SCALE),
       anims: { walk: { frames: [0, 1, 2, 3], fps: 6 } },
-      body: px({ x: 11, y: 5, w: 33, h: 83 }),
+      body: toPx(UNIT * MANAGER_SCALE)({ x: 11, y: 5, w: 33, h: 83 }),
     },
     logo: { ...sheet([logo], 40, 40), body: px({ x: 2, y: 2, w: 36, h: 36 }), circle: px({ x: 20, y: 20, r: 18 }) },
     meeting: {
