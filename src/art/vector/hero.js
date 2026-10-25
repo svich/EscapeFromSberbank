@@ -308,8 +308,8 @@ function jeans(ctx, y, hipB, legB, hipF, legF) {
   hipsPath(y)(ctx);
   ctx.closePath();
   outline(ctx, OW * 2);
-  leg(ctx, hipB, legB, C.jeans, false);
   leg(ctx, hipF, legF, C.jeansShade, false);
+  leg(ctx, hipB, legB, C.jeans, false);
   torsoTop(ctx, y);
   shape(ctx, hipsPath(y), C.jeans, false);
   strokePts(ctx, [[27, y + 51.7], [41.6, y + 51.7]], OW, C.outline);
@@ -425,8 +425,8 @@ function drawPose(ctx, p) {
   ponytail(ctx, [21, headY + 8], p.tail ?? [-0.75, 0.66], p.tailPhase ?? 0, p.tailAmp ?? 1);
   arm(ctx, [39, 46 + y], p.armB, C.skinShade);
   if (winter) {
-    leg(ctx, hipB, p.legB, C.jeans);
     leg(ctx, hipF, p.legF, C.jeansShade);
+    leg(ctx, hipB, p.legB, C.jeans);
     torso(ctx, y);
   } else {
     jeans(ctx, y, hipB, p.legB, hipF, p.legF);
@@ -496,8 +496,8 @@ function drawTrip(ctx) {
 
 // Face down on the floor after the trip, feet kicking up behind.
 function drawProne(ctx, k) {
-  leg(ctx, [36, 65], [[-9, 2], [-13 + k, -9 + k * 3]], C.jeans);
   leg(ctx, [36, 71], [[-9, 1], [-17, 2]], C.jeansShade);
+  leg(ctx, [36, 65], [[-9, 2], [-13 + k, -9 + k * 3]], C.jeans);
   tilted(ctx, [36, 67.5], Math.PI / 2, () => torso(ctx, 0));
   arm(ctx, [47, 68], [[-6, 5], [-12, 7]], C.skin, true);
   ponytail(ctx, [53, 62], [-0.9, -0.45 + k * 0.2], k * Math.PI, 1.2);
@@ -535,8 +535,8 @@ function drawSit(ctx, k) {
     head(ctx, 34, 25, 'hurt');
     arm(ctx, [30, 46], [[-6, 6], [-9, 9.5]], C.skin, true);
   });
-  leg(ctx, [hip[0] - 1, hip[1] - 1], [[9, -9], [15, 2]], C.jeans);
   leg(ctx, [hip[0] + 2, hip[1]], [[9, -1], [17, 1]], C.jeansShade);
+  leg(ctx, [hip[0] - 1, hip[1] - 1], [[9, -9], [15, 2]], C.jeans);
   dizzy(ctx, 39, 21, k * 1.2);
 }
 

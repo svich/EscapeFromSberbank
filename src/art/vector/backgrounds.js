@@ -420,19 +420,20 @@ function planter(ctx, x, base, w, h) {
   ctx.fill();
 }
 
-// Glass meeting room with a frosted band and its name.
-function meetingRoom(ctx, x0, x1, name) {
+// A row of glass meeting rooms with a frosted band, each with its name.
+function meetingRooms(ctx, x0, x1, names) {
   const top = 6;
   const base = 140;
+  const w = (x1 - x0) / names.length;
   rr(ctx, x0, top, x1 - x0, base - top, 1, '#f1f4f6');
-  rr(ctx, x0 + 14, base - 32, x1 - x0 - 40, 3.5, 1, '#d9c3a5');
+  names.forEach((_, i) => rr(ctx, x0 + i * w + 8, base - 32, w - 16, 3.5, 1, '#d9c3a5'));
   ctx.fillStyle = 'rgba(225,240,250,0.3)';
   ctx.fillRect(x0, top, x1 - x0, base - top);
   ctx.fillStyle = 'rgba(250,252,253,0.9)';
   ctx.fillRect(x0, 56, x1 - x0, 20);
-  label(ctx, name, x0 + 37, 66.3, 6, '#8a929d', 800);
+  names.forEach((name, i) => label(ctx, `«${name}»`, x0 + (i + 0.5) * w, 66.3, 5.4, '#8a929d', 800));
   ctx.fillStyle = '#6b717b';
-  for (let x = x0; x <= x1; x += (x1 - x0) / 4) ctx.fillRect(x - 0.6, top, 1.2, base - top);
+  for (let i = 0; i <= names.length; i++) ctx.fillRect(x0 + i * w - 0.6, top, 1.2, base - top);
   ctx.fillRect(x0, top, x1 - x0, 1.4);
 }
 
@@ -473,7 +474,7 @@ function lounge(ctx, x) {
 }
 
 function officeBack(ctx) {
-  meetingRoom(ctx, 8, 178, '«Дедлайн»');
+  meetingRooms(ctx, 8, 178, ['Стратегия', 'Тактика', 'План продаж']);
   mossWall(ctx, 206, 270);
   phoneBooth(ctx, 312);
   lounge(ctx, 396);
