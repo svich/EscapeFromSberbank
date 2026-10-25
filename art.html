@@ -1,0 +1,39 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Art Preview</title>
+    <style>
+      body {
+        margin: 0;
+        padding: 24px 16px 48px;
+        background: #15121c;
+        color: #f4eefa;
+        font-family: Nunito, system-ui, sans-serif;
+        font-size: 13px;
+      }
+      h1 { font-size: 24px; margin: 0 0 6px; color: #ff9cc4; }
+      h2 { font-size: 17px; margin: 32px 0 12px; color: #7ee08f; }
+      p { color: #a59cb8; line-height: 1.8; margin: 0; }
+      .row { display: flex; flex-wrap: wrap; gap: 16px; }
+      figure { margin: 0; background: #e9eef2; padding: 8px; border-radius: 8px; }
+      figcaption { margin-top: 8px; text-align: center; color: #4b5068; }
+      canvas { display: block; }
+      canvas.scene { width: min(960px, 100%); height: auto; }
+    </style>
+  </head>
+  <body>
+    <h1>Escape From Sberbank</h1>
+    <p>Art preview. Everything is drawn in code with canvas paths.</p>
+    <h2>Hero</h2>
+    <div class="row" id="hero"></div>
+    <h2>Obstacles</h2>
+    <div class="row" id="obstacles"></div>
+    <h2>Pickups</h2>
+    <div class="row" id="pickups"></div>
+    <h2>Zones</h2>
+    <div id="zones"></div>
+    <script type="module" src="/src/art/preview.js"></script>
+  </body>
+</html>
