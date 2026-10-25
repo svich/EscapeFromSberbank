@@ -969,7 +969,7 @@ function shelf(ctx) {
   const box = (x, y, w, h, label) => {
     roundRect(ctx, x, y, w, h, 0.8, '#d8b07a');
     roundRect(ctx, x + w / 2 - 3, y + 2, 6, 3, 0.6, '#b98f5a', false);
-    text(ctx, label, x + w / 2, y + h * 0.66, 2.6, '#5a3820', 800);
+    text(ctx, label, x + w / 2, y + h * 0.66, Math.min(2.6, (w - 2) / (label.length * 0.72)), '#5a3820', 800);
   };
   box(6, 34, 17, 13, 'АРХИВ');
   box(24.5, 34, 17, 13, 'АРХИВ');
@@ -989,7 +989,7 @@ function shelf(ctx) {
 
   // Shelf 4: stacked paper and a box.
   for (let i = 0; i < 4; i++) roundRect(ctx, 7, 86 - i * 3.2, 15, 3, 0.6, i % 2 ? C.paperShade : C.paper);
-  box(25, 77, 16, 13, 'ДЕЛА');
+  box(25, 77, 16, 13, 'ЗАКЛАДНЫЕ');
 
   // Shelf 5: a plant and more binders.
   roundRect(ctx, 9, 100, 8, 6, [0, 0, 2, 2], '#c45c3a');

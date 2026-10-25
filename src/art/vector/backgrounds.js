@@ -147,6 +147,22 @@ function tower(ctx, x, base, color) {
   ctx.fill();
 }
 
+// Light falling from a lamp: a cone widening downward and fading out.
+// rgb: 'r,g,b'; spread: how much wider each side gets by y1.
+function lightCone(ctx, x, w, y0, y1, spread, rgb, alpha) {
+  const g = ctx.createLinearGradient(0, y0, 0, y1);
+  g.addColorStop(0, `rgba(${rgb},${alpha})`);
+  g.addColorStop(1, `rgba(${rgb},0)`);
+  ctx.fillStyle = g;
+  ctx.beginPath();
+  ctx.moveTo(x, y0);
+  ctx.lineTo(x + w, y0);
+  ctx.lineTo(x + w + spread, y1);
+  ctx.lineTo(x - spread, y1);
+  ctx.closePath();
+  ctx.fill();
+}
+
 function shadowed(ctx, draw, blur = 3, alpha = 0.18) {
   ctx.save();
   ctx.shadowColor = `rgba(40,40,70,${alpha})`;
@@ -266,11 +282,7 @@ function officeWall(ctx) {
   ctx.fillRect(0, 0, 480, 28);
   for (let x = 6; x < 480; x += 40) {
     rr(ctx, x, 20, 26, 1.4, 0.7, '#fffbe8');
-    const glow = ctx.createLinearGradient(0, 21, 0, 34);
-    glow.addColorStop(0, 'rgba(255,250,225,0.35)');
-    glow.addColorStop(1, 'rgba(255,250,225,0)');
-    ctx.fillStyle = glow;
-    ctx.fillRect(x - 3, 21, 32, 13);
+    lightCone(ctx, x, 26, 21.4, 60, 10, '255,250,225', 0.3);
   }
   ctx.fillStyle = '#e7ebee';
   ctx.fillRect(0, 28, 480, 3);
@@ -329,11 +341,8 @@ function officeCeiling(ctx) {
     ctx.fillStyle = '#20242b';
     ctx.fillRect(x + 6, 11, 0.5, 22);
     ctx.fillRect(x + 84, 11, 0.5, 22);
-    const glow = ctx.createLinearGradient(0, 35, 0, 48);
-    glow.addColorStop(0, 'rgba(255,250,225,0.45)');
-    glow.addColorStop(1, 'rgba(255,250,225,0)');
-    ctx.fillStyle = glow;
-    ctx.fillRect(x - 4, 35, 98, 13);
+    lightCone(ctx, x + 1, 88, 35, 110, 26, '255,250,225', 0.3);
+    lightCone(ctx, x + 6, 78, 35, 80, 8, '255,250,225', 0.2);
     rr(ctx, x, 32, 90, 2.4, 1, '#20242b');
     rr(ctx, x + 0.5, 34, 89, 1.3, 0.6, '#fffdf0');
   }
@@ -642,14 +651,15 @@ function archiveBox(ctx, x, y, w, h, tag) {
   ctx.fillStyle = 'rgba(120,80,40,0.25)';
   ctx.fillRect(x, y + h * 0.18, w, 0.7);
   if (tag) {
-    rr(ctx, x + w * 0.2, y + h * 0.4, w * 0.6, h * 0.3, 0.5, '#f7f3ea');
-    label(ctx, tag, x + w / 2, y + h * 0.56, Math.min(4, h * 0.22), '#6b5a48', 800);
+    // The label shrinks to fit long words on the plate.
+    rr(ctx, x + w * 0.1, y + h * 0.4, w * 0.8, h * 0.3, 0.5, '#f7f3ea');
+    label(ctx, tag, x + w / 2, y + h * 0.56, Math.min(4, h * 0.22, (w * 0.8 - 1.5) / (tag.length * 0.72)), '#6b5a48', 800);
   }
 }
 
 // Warehouse racking with archive boxes, and a wire storage cage.
 function backroomsBack(ctx) {
-  const tags = ['АРХИВ', '', '', 'ДЕЛА', '', '', '2019', ''];
+  const tags = ['АРХИВ', '', 'ДЕНЬГИ', '', 'ЗАКЛАДНЫЕ', '', '2019', ''];
   let n = 0;
   for (const x0 of [10, 170]) {
     for (const x of [x0, x0 + 140]) rr(ctx, x, 6, 4, 124, 1, '#5a6b8a');
@@ -688,11 +698,8 @@ function backroomsCeiling(ctx) {
     ctx.fillStyle = '#4f5864';
     ctx.fillRect(x + 10, 11, 0.6, 18);
     ctx.fillRect(x + 70, 11, 0.6, 18);
-    const glow = ctx.createLinearGradient(0, 32, 0, 46);
-    glow.addColorStop(0, 'rgba(240,250,255,0.5)');
-    glow.addColorStop(1, 'rgba(240,250,255,0)');
-    ctx.fillStyle = glow;
-    ctx.fillRect(x - 4, 32, 88, 14);
+    lightCone(ctx, x + 1, 78, 32, 110, 24, '240,250,255', 0.35);
+    lightCone(ctx, x + 6, 68, 32, 76, 8, '240,250,255', 0.2);
     rr(ctx, x, 28, 80, 3, 1, '#d9dde1');
     rr(ctx, x + 2, 31, 76, 1.6, 0.8, '#f4fbff');
   }
@@ -715,18 +722,21 @@ function pallet(ctx, x, base, w) {
   for (const dx of [2, w / 2 - 2, w - 6]) rr(ctx, x + dx, base - 4, 4, 2, 0.3, '#9c7247');
 }
 
+// Square concrete column from the floor up into the ceiling.
 function column(ctx, x, base) {
   rr(ctx, x, 0, 16, base, 0, '#d4d7d9');
   ctx.fillStyle = '#c4c8cc';
   ctx.fillRect(x + 12, 0, 4, base);
+  ctx.fillRect(x - 3, 0, 22, 5);
   for (let i = 0; i < 4; i++) {
     ctx.fillStyle = i % 2 ? '#2f343b' : '#e2c13c';
     ctx.fillRect(x, base - 12 + i * 3, 16, 3);
   }
 }
 
+// As tall as the room, so the columns reach the ceiling.
 function backroomsMid(ctx) {
-  const base = 80;
+  const base = 230;
   pallet(ctx, 14, base, 66);
   boxStack(ctx, 16, base - 6, [3, 2, 1]);
   column(ctx, 120, base);
@@ -749,7 +759,7 @@ function backroomsMid(ctx) {
   boxStack(ctx, 318, base, [2, 1]);
   column(ctx, 380, base);
   boxStack(ctx, 412, base, [3, 2]);
-  veil(ctx, 480, 80, 'rgba(238,241,240,0.3)');
+  veil(ctx, 480, 230, 'rgba(238,241,240,0.3)');
 }
 
 // Smooth grey concrete with a painted safety line.
@@ -1022,7 +1032,7 @@ export function buildBackgrounds() {
       sky: layer([480, 230], officeSky),
       wall: layer([480, 230], officeWall),
       back: layer([480, 140], officeBack),
-      ceiling: layer([480, 48], officeCeiling),
+      ceiling: layer([480, 110], officeCeiling),
       mid: layer([480, 82], officeMid),
       floor: layer(FLOOR, officeFloor),
     },
@@ -1030,8 +1040,8 @@ export function buildBackgrounds() {
       wall: layer([480, 230], backroomsWall),
       stairs: layer([480, 180], backroomsStairs),
       back: layer([480, 130], backroomsBack),
-      ceiling: layer([480, 46], backroomsCeiling),
-      mid: layer([480, 80], backroomsMid),
+      ceiling: layer([480, 110], backroomsCeiling),
+      mid: layer([480, 230], backroomsMid),
       floor: layer(FLOOR, backroomsFloor),
     },
     street: {
