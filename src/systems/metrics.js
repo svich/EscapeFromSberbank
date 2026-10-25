@@ -19,16 +19,13 @@ const toFeet = (b, feet) => ({ x: b.x, y: b.y, w: b.w, h: feet - b.y });
 function heroMetrics(def, down) {
   const feet = def.feetY ?? def.body.y + def.body.h;
   const body = toFeet(def.body, feet);
-  const slideBody = toFeet(def.slideBody ?? def.body, feet);
   return {
     frameW: def.w,
     frameH: def.h,
     body,
-    slideBody,
     downBody: toFeet(down.body, feet), // in the wider knocked-down frames
     feet,
     standH: body.h,
-    slideH: slideBody.h,
     originY: feet / def.h, // origin that puts the soles on a given y
   };
 }
@@ -51,21 +48,6 @@ function obstacleMetrics(type, def, hero) {
       originY: cy / h,
       y: G - (h - cy),
       top: h - cy + r,
-    };
-  }
-
-  if (cfg.kind === 'slide') {
-    // Hitbox bottom halfway between the sliding and the standing head, so a
-    // slide always passes under it and standing always hits it.
-    const gap = (hero.standH - hero.slideH) / 2;
-    const clearance = hero.slideH + gap;
-    return {
-      ...base,
-      originX: 0.5,
-      originY: 0.5,
-      y: G - clearance + h / 2 - (body.y + body.h),
-      wobble: Math.max(0, gap * 0.5),
-      top: clearance + body.h,
     };
   }
 
@@ -134,7 +116,6 @@ export function clearTiming(type) {
   const T = CONFIG.spawn.timing;
   const kind = CONFIG.obstacles[type].kind;
   const j = metrics.jump;
-  if (kind === 'slide') return { lead: T.slide.lead, tail: CONFIG.player.slideTime * T.slide.tailOfSlide };
   if (kind === 'double') return { lead: j.double * T.double.lead, tail: j.double * T.double.tail };
   return { lead: j.single * T.jump.lead, tail: j.single * T.jump.tail };
 }

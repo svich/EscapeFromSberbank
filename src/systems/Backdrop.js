@@ -1,62 +1,73 @@
+import { LAYERS } from '../art/vector/backgrounds.js';
 import { CONFIG } from '../config.js';
 
 const { width: W, height: H, groundY: G } = CONFIG;
+const FRONT_DEPTH = 25; // over the hero (20), under pop-up text (30)
+const SNOWY = new Set(['street']); // winter zones get a light snowfall
 
-// Three parallax tile layers per zone (far, mid, floor). Layers of the same
-// kind stack by zone, so a cross-fade blends far with far, mid with mid.
+// Parallax tile layers per zone, back to front (see LAYERS). Front layers
+// pass over the play field; static screens (menu, end screens) leave them out
+// and only drift the farthest layers.
 export class Backdrop {
-  constructor(scene, zone = 0) {
+  constructor(scene, zone = 0, { front = false } = {}) {
     this.scene = scene;
     this.zone = zone;
-    this.sets = CONFIG.zones.map(({ key }, i) => {
-      const midH = scene.textures.get(`bg-${key}-mid`).getSourceImage().height;
-      const set = {
-        far: scene.add.tileSprite(0, 0, W, G, `bg-${key}-far`).setOrigin(0, 0).setDepth(0 + i * 0.01),
-        mid: scene.add.tileSprite(0, G - midH, W, midH, `bg-${key}-mid`).setOrigin(0, 0).setDepth(1 + i * 0.01),
-        floor: scene.add.tileSprite(0, G, W, H - G, `bg-${key}-floor`).setOrigin(0, 0).setDepth(2 + i * 0.01),
-      };
-      this.layers(set).forEach((l) => l.setVisible(i === zone).setAlpha(i === zone ? 1 : 0));
-      return set;
-    });
+    this.sets = CONFIG.zones.map(({ key }, i) =>
+      LAYERS[key]
+        .filter((l) => front || !l.front)
+        .map((l, j) => {
+          const texture = `bg-${key}-${l.name}`;
+          const h = scene.textures.get(texture).getSourceImage().height;
+          const y = { top: 0, floor: G - h, ground: G, bottom: H - h }[l.anchor];
+          const sprite = scene.add
+            .tileSprite(0, y, W, h, texture)
+            .setOrigin(0, 0)
+            .setDepth((l.front ? FRONT_DEPTH : j) + i * 0.01)
+            .setVisible(i === zone);
+          return { sprite, factor: l.factor };
+        }),
+    );
+    // Flakes drift with part of the world's scroll, behind the play field.
+    this.snow = scene.add
+      .particles(0, -20, 'fx-dot', {
+        x: { min: 0, max: W * 2 },
+        speedX: { onEmit: () => -40 - (scene.speed ?? 0) * (scene.motion ?? 0) * 0.45 },
+        speedY: { min: 50, max: 110 },
+        scale: { min: 0.25, max: 0.6 },
+        alpha: { min: 0.5, max: 0.9 },
+        lifespan: 14000,
+        frequency: 60,
+        emitting: false,
+      })
+      .setDepth(6);
+    this.updateSnow();
   }
 
-  layers(set) {
-    return [set.far, set.mid, set.floor];
-  }
-
-  setZone(zone, fadeMs = CONFIG.bg.fadeMs) {
-    if (zone === this.zone) return;
-    const prev = this.sets[this.zone];
-    this.zone = zone;
-    const next = this.layers(this.sets[zone]);
-    this.scene.tweens.killTweensOf(next);
-    if (fadeMs <= 0) {
-      next.forEach((l) => l.setVisible(true).setAlpha(1));
-      this.layers(prev).forEach((l) => l.setVisible(false));
-      return;
+  updateSnow() {
+    const snowy = SNOWY.has(CONFIG.zones[this.zone].key);
+    this.snow.setVisible(snowy);
+    if (snowy && !this.snow.emitting) {
+      this.snow.start();
+      this.snow.fastForward(9000);
+    } else if (!snowy && this.snow.emitting) {
+      this.snow.stop();
     }
-    next.forEach((l) => l.setVisible(true).setAlpha(0));
-    this.scene.tweens.add({
-      targets: next,
-      alpha: 1,
-      duration: fadeMs,
-      ease: 'Sine.easeInOut',
-      onComplete: () => {
-        if (this.sets[this.zone] !== prev) this.layers(prev).forEach((l) => l.setVisible(false));
-      },
-    });
+  }
+
+  setZone(zone) {
+    if (zone === this.zone) return;
+    for (const { sprite } of this.sets[this.zone]) sprite.setVisible(false);
+    for (const { sprite } of this.sets[zone]) sprite.setVisible(true);
+    this.zone = zone;
+    this.updateSnow();
   }
 
   // scroll: world distance in px. Whole-pixel offsets keep the tiles crisp.
-  // farOnly: ambient drift for static screens (the floor stays put).
-  update(scroll, farOnly = false) {
-    const { far, mid, floor } = CONFIG.bg;
-    for (const set of this.sets) {
-      if (!set.far.visible) continue;
-      set.far.tilePositionX = Math.round(scroll * far);
-      if (farOnly) continue;
-      set.mid.tilePositionX = Math.round(scroll * mid);
-      set.floor.tilePositionX = Math.round(scroll * floor);
+  // ambient: slow drift for static screens (only the far layers move).
+  update(scroll, ambient = false) {
+    for (const { sprite, factor } of this.sets[this.zone]) {
+      if (ambient && factor > 0.2) continue;
+      sprite.tilePositionX = Math.round(scroll * factor);
     }
   }
 }

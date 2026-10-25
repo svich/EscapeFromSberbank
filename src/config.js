@@ -24,15 +24,15 @@ export const CONFIG = {
       label: 'Офис',
       subtitle: 'Этаж 7. Сдаём квартальные KPI.',
       coins: 35,
-      weights: { elder: 5, chair: 3, meeting: 3 },
+      weights: { elder: 5, chair: 3 },
     },
     {
-      key: 'lobby',
-      title: 'Холл',
-      label: 'Холл',
-      subtitle: 'Не смотри начальству в глаза.',
+      key: 'backrooms',
+      title: 'Хранилище',
+      label: 'Хранилище',
+      subtitle: 'Служебный этаж. Посторонним вход воспрещён.',
       coins: 45,
-      weights: { elder: 2, chair: 3, meeting: 3, shelf: 4 },
+      weights: { money: 4, safe: 3, shelf: 4 },
     },
     {
       key: 'street',
@@ -40,7 +40,7 @@ export const CONFIG = {
       label: 'Улица',
       subtitle: 'Собери на билет. Никаких стендапов.',
       coins: 55,
-      weights: { elder: 2, chair: 2, meeting: 3, logo: 4 },
+      weights: { worker: 5, logo: 4 },
     },
   ],
 
@@ -51,9 +51,6 @@ export const CONFIG = {
     { key: 'georgia', name: 'Грузия', to: 'в Грузию', city: 'Казбеги' },
     { key: 'turkey', name: 'Турция', to: 'в Турцию', city: 'Каппадокия' },
   ],
-
-  // Parallax factors and the cross-fade between zone backgrounds.
-  bg: { far: 0.2, mid: 0.5, floor: 1, fadeMs: 1600 },
 
   player: {
     x: px(90),
@@ -68,10 +65,8 @@ export const CONFIG = {
     airJumps: 1,
     jumpCut: 0.45, // velocity multiplier when the jump button is released early
     minJumpTime: 0.08, // s of guaranteed rise before a release can cut the jump
-    fastFall: px(560), // px/s, Down in the air
     coyoteTime: 0.09,
     jumpBuffer: 0.12,
-    slideTime: 0.6, // keeps going while Down is held
     invulnTime: 1.0, // after the shield absorbs a hit
   },
 
@@ -83,7 +78,9 @@ export const CONFIG = {
   obstacles: {
     elder: { unlockAfter: 0, speed: px(18), kind: 'jump', fall: 'trip', hint: 'Прыгай!' },
     chair: { unlockAfter: 13, speed: px(85), kind: 'jump', fall: 'trip', hint: 'Прыгай!' },
-    meeting: { unlockAfter: 29, speed: px(45), kind: 'slide', wobbleHz: 1.4, hint: 'Подкат!' },
+    worker: { unlockAfter: 0, speed: px(28), kind: 'jump', fall: 'trip', hint: 'Прыгай!' },
+    money: { unlockAfter: 0, speed: 0, kind: 'jump', fall: 'trip', hint: 'Прыгай!' },
+    safe: { unlockAfter: 0, speed: 0, kind: 'jump', fall: 'knock', hint: 'Прыгай!' },
     shelf: { unlockAfter: 0, speed: 0, kind: 'double', fall: 'knock', hint: 'Двойной прыжок!' },
     logo: { unlockAfter: 0, speed: px(115), kind: 'jump', hint: 'Прыгай!' },
   },
@@ -110,7 +107,6 @@ export const CONFIG = {
     timing: {
       jump: { lead: 0.45, tail: 0.6 },
       double: { lead: 0.5, tail: 0.55 },
-      slide: { lead: 0.22, tailOfSlide: 0.75 },
     },
   },
 
@@ -118,7 +114,6 @@ export const CONFIG = {
     coinScore: 10,
     lineChance: 0.6, // coin row/arc in a free gap
     overChance: 0.45, // coin above a jumpable obstacle
-    underChance: 0.6, // coin under a meeting
     spacing: 0.13, // s between coins in a row
     chocolateFirstAt: 300, // m
     chocolateEvery: [500, 750], // m, random range between chocolates (extra lives)

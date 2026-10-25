@@ -268,23 +268,6 @@ function drawPose(ctx, p) {
   if (p.phone) phone(ctx, ...p.phone);
 }
 
-// Slide: the upper body leans back around the hips, legs kick forward.
-function drawSlide(ctx, tailPhase) {
-  const hip = [40, 68];
-  leg(ctx, [hip[0] - 4, hip[1] + 1], [[7, 3], [13, 5]], C.jeansShade);
-  ctx.save();
-  ctx.translate(hip[0], hip[1]);
-  ctx.rotate(-0.75);
-  ctx.translate(-34, -HIP_Y);
-  ponytail(ctx, [21, 33], [-0.2, 1], tailPhase, 1.4);
-  arm(ctx, [39, 46], [[5, 3], [10, 1]], C.skinShade);
-  torso(ctx, 0);
-  head(ctx, 34, 25, 'open');
-  arm(ctx, [30, 46], [[-3, 6], [-2, 12]], C.skin, true);
-  ctx.restore();
-  leg(ctx, [hip[0] + 1, hip[1]], [[7, 1], [13, 3]], C.jeans);
-}
-
 // --- Falls -------------------------------------------------------------------
 // Knocked down by an obstacle. Drawn in a wider frame (same height and ground
 // line) so she fits lying down.
@@ -451,30 +434,25 @@ function poses() {
     phone: [37, 43, i === 1],
   }));
   return {
-    list: [...run, jump, fall, 'slide0', 'slide1', hurt, ...idle],
+    list: [...run, jump, fall, hurt, ...idle],
     anims: {
       run: { frames: [0, 1, 2, 3, 4, 5, 6, 7], fps: 14 },
       jump: { frames: [8], fps: 1 },
       fall: { frames: [9], fps: 1 },
-      slide: { frames: [10, 11], fps: 8 },
-      hurt: { frames: [12], fps: 1 },
-      idle: { frames: [13, 14, 15, 16], fps: 4 },
+      hurt: { frames: [10], fps: 1 },
+      idle: { frames: [11, 12, 13, 14], fps: 4 },
     },
   };
 }
 
 export function buildHero(scale) {
   const { list, anims } = poses();
-  const frames = list.map((p) => (ctx) => {
-    if (p === 'slide0' || p === 'slide1') drawSlide(ctx, p === 'slide0' ? 0 : Math.PI);
-    else drawPose(ctx, p);
-  });
+  const frames = list.map((p) => (ctx) => drawPose(ctx, p));
   const px = toPx(scale);
   return {
     ...renderSheet(frames, FRAME_W, FRAME_H, scale),
     anims,
     body: px({ x: 22, y: 10, w: 24, h: 68 }),
-    slideBody: px({ x: 16, y: 32, w: 40, h: 46 }),
     feetY: Math.round(FEET_Y * scale),
   };
 }

@@ -2,7 +2,7 @@ import '@fontsource/nunito/400.css';
 import '@fontsource/nunito/700.css';
 
 await document.fonts.load('700 16px Nunito', 'Побег Escape');
-const { buildBackgrounds } = await import('./vector/backgrounds.js');
+const { LAYERS, buildBackgrounds } = await import('./vector/backgrounds.js');
 const { buildSprites } = await import('./vector/sprites.js');
 
 const sprites = buildSprites();
@@ -59,10 +59,12 @@ const obstacleRow = document.getElementById('obstacles');
 const pickupRow = document.getElementById('pickups');
 const objects = [
   [obstacleRow, 'elder', 'grannies & grandpa', 'walk0'],
+  [obstacleRow, 'worker', 'Chelyabinsk workers', 'walk0'],
   [obstacleRow, 'chair', 'office chair'],
   [obstacleRow, 'shelf', 'bookcase'],
+  [obstacleRow, 'money', 'money pile'],
+  [obstacleRow, 'safe', 'safe'],
   [obstacleRow, 'logo', 'logo ball'],
-  [obstacleRow, 'meeting', 'meeting invite', 'flap'],
   [obstacleRow, 'door', 'exit door'],
   [obstacleRow, 'taxi', 'taxi: the way out'],
   [pickupRow, 'coin', 'coin: level goal', 'spin'],
@@ -92,8 +94,8 @@ function tile(ctx, img, offset, y) {
 
 const ZONES = [
   ['office', 'Zone 1: open space', [['elder', 1200, 'walk0'], ['coin', 1650, 'spin', 700], ['chair', 2200]]],
-  ['lobby', 'Zone 2: lobby', [['shelf', 1250], ['chocolate', 1750, null, 700], ['logo', 2300]]],
-  ['street', 'Zone 3: street', [['meeting', 1300, 'flap', 640], ['coffee', 1800, 'steam', 760], ['taxi', 2400]]],
+  ['backrooms', 'Zone 2: backrooms', [['shelf', 1250], ['chocolate', 1750, null, 700], ['money', 2050], ['safe', 2350]]],
+  ['street', 'Zone 3: winter Chelyabinsk', [['worker', 1300, 'walk0'], ['coffee', 1800, 'steam', 760], ['taxi', 2400]]],
 ];
 
 const zoneRoot = document.getElementById('zones');
@@ -110,16 +112,18 @@ for (const [zone, label, props] of ZONES) {
   fig.append(cv, caption);
   zoneRoot.append(fig);
 
-  const bg = backgrounds[zone];
+  const layers = LAYERS[zone].map((l) => {
+    const img = backgrounds[zone][l.name];
+    return { img, factor: l.factor, y: { top: 0, floor: GROUND_Y - img.height, ground: GROUND_Y, bottom: H - img.height }[l.anchor] };
+  });
   const hero = sprites.hero;
   animators.push((t) => {
     const dist = (t / 1000) * SPEED;
-    tile(ctx, bg.far, -dist * 0.2, 0);
-    tile(ctx, bg.mid, -dist * 0.5, GROUND_Y - bg.mid.height);
-    tile(ctx, bg.floor, -dist, GROUND_Y);
+    for (const l of layers) tile(ctx, l.img, -dist * l.factor, l.y);
 
     for (const [key, base, anim, y] of props) {
       const s = sprites[key];
+      if (!s) continue;
       const x = ((((base - dist) % 2600) + 2600) % 2600) - 320;
       const py = y ?? GROUND_Y - s.h;
       if (key === 'logo') drawRotated(ctx, key, x, py, -dist / 55);

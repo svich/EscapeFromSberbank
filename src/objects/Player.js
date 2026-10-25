@@ -6,8 +6,8 @@ const P = CONFIG.player;
 const G = CONFIG.groundY;
 
 // The runner. Stays at a fixed x; Arcade handles gravity and the floor (world
-// bounds bottom = ground). Emits 'player-jump' (air: boolean), 'player-land',
-// 'player-slide', 'player-dive' and 'player-down' (fall) for sound and particles.
+// bounds bottom = ground). Emits 'player-jump' (air: boolean), 'player-land'
+// and 'player-down' (fall) for sound and particles.
 export class Player extends Phaser.Physics.Arcade.Sprite {
   constructor(scene, x) {
     super(scene, x, 0, 'hero', 0);
@@ -23,8 +23,6 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
 
     this.mode = 'run'; // run | dead | exit
     this.grounded = true;
-    this.sliding = false;
-    this.slideTimer = 0;
     this.coyote = 0;
     this.buffer = 0;
     this.airJumps = P.airJumps;
@@ -58,7 +56,7 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
 
     let jumpedNow = false;
     if (onGround) {
-      if (!this.grounded) this.land(input);
+      if (!this.grounded) this.emit('player-land');
       this.grounded = true;
       this.coyote = P.coyoteTime;
       this.airJumps = P.airJumps;
@@ -91,20 +89,6 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
       }
     }
 
-    // Down: slide on the ground, dive in the air.
-    if (input.downPressed) {
-      if (onGround && !jumpedNow) {
-        this.startSlide();
-      } else if (!onGround) {
-        body.velocity.y = Math.max(body.velocity.y, P.fastFall);
-        this.rising = false;
-        this.emit('player-dive');
-      }
-    }
-    if (this.sliding) {
-      this.slideTimer += dt;
-      if (!onGround || (this.slideTimer >= P.slideTime && !input.downHeld)) this.endSlide();
-    }
 
     this.updateAnim(onGround && !jumpedNow);
   }
@@ -117,7 +101,6 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
   }
 
   jump(air) {
-    if (this.sliding) this.endSlide();
     this.body.setVelocityY(-(air ? this.jumpCfg.v2 : this.jumpCfg.v1));
     if (air) this.airJumps -= 1;
     this.buffer = 0;
@@ -129,30 +112,10 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
     this.emit('player-jump', air);
   }
 
-  land(input) {
-    this.emit('player-land');
-    if (input.downHeld) this.startSlide();
-  }
-
-  startSlide() {
-    this.slideTimer = 0;
-    if (this.sliding) return;
-    this.sliding = true;
-    this.setHitbox(this.hero.slideBody);
-    this.emit('player-slide');
-  }
-
-  endSlide() {
-    if (!this.sliding) return;
-    this.sliding = false;
-    this.setHitbox(this.hero.body);
-  }
-
   // fall: 'trip' (forward onto her stomach), 'knock' (bounced back onto her
   // bottom) or 'hurt' (a plain hurt hop).
   die(fall = 'hurt') {
     this.mode = 'dead';
-    this.endSlide();
     this.rising = false;
     this.fall = fall;
     this.downTime = 0;
@@ -176,7 +139,6 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
   // Walk-off at the exit door: physics keeps her on the floor, the scene tweens x.
   exit() {
     this.mode = 'exit';
-    this.endSlide();
     this.rising = false;
   }
 
@@ -190,7 +152,6 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
   updateAnim(onGround) {
     let key;
     if (this.mode === 'dead') key = this.deadAnim;
-    else if (this.sliding) key = 'hero-slide';
     else if (!onGround) key = this.body.velocity.y < 0 ? 'hero-jump' : 'hero-fall';
     else key = 'hero-run';
     if (this.anims.currentAnim?.key !== key) this.play(key);

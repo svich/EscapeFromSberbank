@@ -65,7 +65,7 @@ export class GameScene extends Phaser.Scene {
     // Only the floor collides: world bounds bottom = ground.
     this.physics.world.setBounds(0, -H, W, G + H, false, false, false, true);
 
-    this.backdrop = new Backdrop(this, this.zone);
+    this.backdrop = new Backdrop(this, this.zone, { front: true });
     this.obstacles = this.physics.add.group({ allowGravity: false, immovable: true });
     this.pickups = this.physics.add.group({ allowGravity: false, immovable: true });
     this.player = new Player(this, CONFIG.player.x).setDepth(20);
@@ -94,11 +94,6 @@ export class GameScene extends Phaser.Scene {
       audio.sfx('land');
       this.fx.puffAt(this.player.x, G, 4);
     });
-    this.player.on('player-slide', () => {
-      audio.sfx('slide');
-      this.fx.puffAt(this.player.x + px(8), G, 5);
-    });
-    this.player.on('player-dive', () => audio.sfx('slide'));
     this.player.on('player-down', (fall) => this.onPlayerDown(fall));
 
     this.publish('run.coins', 0);
@@ -230,7 +225,7 @@ export class GameScene extends Phaser.Scene {
     this.zone = this.nextZone;
     this.levelCoins = 0;
     this.levelStart = this.checkpoint();
-    this.backdrop.setZone(this.zone, 0);
+    this.backdrop.setZone(this.zone);
     this.spawner.restart(this.runTime);
     this.mode = 'run';
     this.controls.enabled = true;
@@ -261,9 +256,6 @@ export class GameScene extends Phaser.Scene {
     o.ownSpeed = cfg.speed;
     o.age = 0;
     o.knocked = false;
-    o.baseY = m.y;
-    o.wobble = m.wobble ?? 0;
-    o.phase = Math.random() * Math.PI * 2;
     o.rollRadius = m.rollRadius ?? 0;
     o.body.moves = false;
     if (m.circle) {
@@ -309,13 +301,11 @@ export class GameScene extends Phaser.Scene {
   }
 
   moveObjects(dt, scroll) {
-    const wobbleW = CONFIG.obstacles.meeting.wobbleHz * Math.PI * 2;
     for (const o of this.obstacles.getChildren().slice()) {
       if (o.knocked) continue;
       const dx = (scroll + o.ownSpeed * this.motion) * dt;
       o.x -= dx;
       o.age += dt;
-      if (o.wobble) o.y = o.baseY + Math.sin(o.age * wobbleW + o.phase) * o.wobble;
       if (o.rollRadius) o.angle -= Phaser.Math.RadToDeg(dx / o.rollRadius);
       if (o.hint) o.hint.setPosition(o.x, o.y - o.hintLift);
       if (o.x < -o.displayWidth) this.removeObstacle(o);

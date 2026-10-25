@@ -18,7 +18,7 @@ export class MenuScene extends Phaser.Scene {
   create() {
     fadeIn(this);
     this.backdrop = new Backdrop(this, 0);
-    this.scroll = 0;
+    this.scroll = 6000; // starts with the logo wall off to the side of the title
 
     addText(this, W / 2, 40, 'Побег из', { size: 64, origin: [0.5, 0] }).setDepth(6);
     const title = addText(this, W / 2, 104, 'СБЕРБАНКА', { size: 140, weight: 700, color: '#21a038', origin: [0.5, 0] }).setDepth(6);
@@ -29,24 +29,20 @@ export class MenuScene extends Phaser.Scene {
       .sprite(330, G, 'hero', 0)
       .setOrigin(0.5, metrics.hero.originY)
       .setDepth(10)
-      .play('hero-idle');
+      .play('hero-run');
 
-    const panel = { x: 660, y: 350, w: 1180, h: 480 };
+    const panel = { x: 760, y: 380, w: 980, h: 300 };
     addPanel(this, panel.x, panel.y, panel.w, panel.h).setDepth(5);
     const lines = [
-      ['Пробел / ↑ / W', 'Прыжок (ещё раз — в воздухе)'],
-      ['↓ / S', 'Подкат (в воздухе — нырок)'],
-      ['Тап справа / слева', 'Прыжок / подкат'],
-      ['Esc / P,  M', 'Пауза,  звук'],
-      ['Монеты', 'Собери цель уровня — и в самолёт'],
-      ['Кофе', '5 секунд сносишь всё на пути'],
+      ['ПРОБЕЛ', 'прыжок'],
+      ['ПРОБЕЛ в воздухе', 'двойной прыжок'],
     ];
     lines.forEach(([key, action], i) => {
-      const y = panel.y + 36 + i * 58;
-      addText(this, panel.x + 50, y, key, { size: 36, color: '#ffd23f' }).setDepth(6);
-      addText(this, panel.x + 470, y, action, { size: 36, weight: 400 }).setDepth(6);
+      const y = panel.y + 44 + i * 64;
+      addText(this, panel.x + 70, y, key, { size: 40, color: '#ffd23f' }).setDepth(6);
+      addText(this, panel.x + 470, y, `—  ${action}`, { size: 40, weight: 400 }).setDepth(6);
     });
-    this.prompt = addText(this, panel.x + panel.w / 2, panel.y + panel.h - 88, 'Жми ПРОБЕЛ или тапни, чтобы начать', {
+    this.prompt = addText(this, panel.x + panel.w / 2, panel.y + panel.h - 92, 'Жми ПРОБЕЛ, чтобы начать', {
       size: 48,
       weight: 700,
       color: '#7ee08f',
@@ -75,12 +71,16 @@ export class MenuScene extends Phaser.Scene {
   startGame() {
     if (this.leaving) return;
     audio.sfx('select');
-    fadeTo(this, 'Game', {}); // a new run: {} replaces a retried level's checkpoint
+    // A new run: {} replaces a retried level's checkpoint. ?level=N in the
+    // page URL starts it on level N (1-based), handy for testing.
+    const level = Number(new URLSearchParams(window.location.search).get('level'));
+    const zone = Phaser.Math.Clamp(Math.floor(level) - 1, 0, CONFIG.zones.length - 1);
+    fadeTo(this, 'Game', level >= 1 ? { zone } : {});
   }
 
   update(_time, delta) {
-    // Slow drift of the far layer so the office feels alive behind the title.
-    this.scroll += (delta / 1000) * 120;
-    this.backdrop.update(this.scroll, true);
+    // She's already running: the whole office scrolls past behind the title.
+    this.scroll += (delta / 1000) * 360;
+    this.backdrop.update(this.scroll);
   }
 }

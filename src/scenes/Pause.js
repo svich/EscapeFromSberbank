@@ -21,7 +21,7 @@ export class PauseScene extends Phaser.Scene {
     addPanel(this, W / 2 - 480, 200, 960, 680);
     addText(this, W / 2, 240, 'Пауза', { size: 112, weight: 700, color: '#f27fb5', origin: [0.5, 0] });
     addText(this, W / 2, 380, 'Кофе-брейк. HR всё видит.', { size: 40, weight: 400, color: '#e9e4f2', origin: [0.5, 0] });
-    addText(this, W / 2, 470, 'Esc / P / тап  —  продолжить', { size: 40, origin: [0.5, 0] });
+    addText(this, W / 2, 470, 'ПРОБЕЛ  —  продолжить', { size: 40, origin: [0.5, 0] });
     this.muteText = addText(this, W / 2, 530, '', { size: 40, origin: [0.5, 0] });
     addText(this, W / 2, 590, 'Q  —  выйти в меню', { size: 40, origin: [0.5, 0] });
     this.refreshMute();

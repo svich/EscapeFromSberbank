@@ -2,14 +2,19 @@
 // UNIT px per unit for a 1920x1080 game. Ground objects rest with the frame
 // bottom on the floor.
 
-import { C, OW, capsule, ellipse, renderSheet, roundRect, shape, strokePts, text, toPx } from './draw.js';
+import { C, OW, capsule, ellipse, outline, renderSheet, roundRect, shape, strokePts, text, toPx } from './draw.js';
 import { buildHero, buildHeroDown } from './hero.js';
 
 export const UNIT = 2.75;
 // Elders stand a touch shorter than the hero.
 const ELDER_SCALE = 1.65;
+// Workers stand nearly her height and twice as broad.
+const WORKER_SCALE = 1.5;
 // Fairy wings drawn larger than the hero's art scale so they stand out.
 const WING_SCALE = 1.4;
+// Backroom props (money pile, safe) drawn chunkier so their outlines match
+// the people's.
+const VAULT_SCALE = 1.4;
 
 
 // --- Obstacles ---------------------------------------------------------------
@@ -267,6 +272,443 @@ function grandpaUshanka(step) {
 
 const ELDERS = [grannyTrolley, grandpaCane, grannyPassbook, grandpaMedals, grannyWalker, grannyFur, grandpaNordic, grandpaUshanka];
 
+// Big working men on a Chelyabinsk street in winter, stomping toward the
+// player (facing left). Built like the elders, but broad, bellied and nearly
+// her height. Six trades, two heavy steps each. Legs stay planted; everything
+// above them bobs with the step.
+// Art shifted right and down in the frame: room for tools carried in front
+// and for hats on the up-step.
+const WORKER_X = 4;
+const WORKER_Y = 2;
+const WORKER_STEPS = [
+  { front: [12.5, 44.3], back: [24, 44.3], bob: 0.3 },
+  { front: [15.5, 43.1], back: [22, 44.3], bob: -0.8 },
+];
+const WORKER_HEAD = [17.6, 14.4];
+const WORKER_WOOD = '#c8955a';
+const WORKER_GLOVE = '#e7ddc4';
+
+function workerTorsoPath(c) {
+  c.moveTo(10.5, 23);
+  c.quadraticCurveTo(19.5, 19, 28.5, 23);
+  c.quadraticCurveTo(32.5, 27, 31.5, 39);
+  c.quadraticCurveTo(19, 42, 8, 39);
+  c.quadraticCurveTo(4, 31, 10.5, 23);
+}
+
+// Barrel torso with a belly out front; `details` paints inside its outline.
+function workerTorso(ctx, coat, details) {
+  shape(ctx, workerTorsoPath, coat);
+  if (!details) return;
+  ctx.save();
+  ctx.beginPath();
+  workerTorsoPath(ctx);
+  ctx.closePath();
+  ctx.clip();
+  details(ctx);
+  ctx.restore();
+  ctx.beginPath();
+  workerTorsoPath(ctx);
+  ctx.closePath();
+  outline(ctx);
+}
+
+function workerArm(ctx, shoulder, hand, sleeve, glove, bands) {
+  capsule(ctx, [shoulder, hand], 4.6, sleeve);
+  if (bands) {
+    const [dx, dy] = [hand[0] - shoulder[0], hand[1] - shoulder[1]];
+    const len = Math.hypot(dx, dy);
+    const [nx, ny] = [(-dy / len) * 2.3, (dx / len) * 2.3];
+    for (const t of bands.at) {
+      const [x, y] = [shoulder[0] + dx * t, shoulder[1] + dy * t];
+      strokePts(ctx, [[x - nx, y - ny], [x + nx, y + ny]], bands.width, bands.color);
+    }
+  }
+  ellipse(ctx, hand[0], hand[1], 2.3, 2.3, glove);
+}
+
+function workerLegs(ctx, { front, back, bob }, [pants, pantsShade]) {
+  for (const [hip, foot, color] of [[[23, 37 + bob], back, pantsShade], [[14.5, 37 + bob], front, pants]]) {
+    capsule(ctx, [hip, foot], 5.4, color);
+    ellipse(ctx, foot[0] - 1.4, foot[1] + 1, 3.9, 2.1, '#2e2622');
+  }
+}
+
+function workerFrame(step, pants, draw) {
+  return (ctx) => {
+    ctx.translate(WORKER_X, WORKER_Y);
+    workerLegs(ctx, step, pants);
+    ctx.translate(0, step.bob);
+    draw(ctx);
+  };
+}
+
+// Stern chibi face: dot eyes under frowning brows, frosty cheeks, a frown,
+// then stubble, beard and moustache as asked.
+function workerFace(ctx, { brow = '#4a3226', nose = '#f2a48e', stubble, beard, mustache, smudge } = {}) {
+  const [x, y] = WORKER_HEAD;
+  const head = (c) => c.ellipse(x, y, 9, 8.8, 0, 0, Math.PI * 2);
+  shape(ctx, head, C.skin);
+  if (stubble || smudge) {
+    ctx.save();
+    ctx.beginPath();
+    head(ctx);
+    ctx.clip();
+    if (stubble) {
+      ellipse(ctx, x - 1, y + 7.4, 8.6, 4.6, stubble, false);
+      for (const [dx, dy] of [[-5, 5.2], [-2.6, 6.6], [0.4, 6], [3.2, 6.8], [5.6, 5.4], [-4, 7.6], [1.8, 7.8]]) {
+        ellipse(ctx, x + dx, y + dy, 0.28, 0.28, 'rgba(60,58,72,0.45)', false);
+      }
+    }
+    if (smudge) ellipse(ctx, x + 4.8, y + 4.4, 2, 1, smudge, false);
+    ctx.restore();
+    ctx.beginPath();
+    head(ctx);
+    outline(ctx);
+  }
+  for (const [ex, dir] of [[x - 3.8, 1], [x + 1.8, -1]]) {
+    ellipse(ctx, ex, y + 0.9, 0.85, 1.1, C.lash, false);
+    ellipse(ctx, ex - 0.3, y + 0.5, 0.3, 0.3, C.white, false);
+    strokePts(ctx, [[ex - 1.6 * dir, y - 2.5], [ex + 1.2 * dir, y - 1.3]], 1.1, brow);
+  }
+  for (const bx of [x - 6, x + 4.2]) ellipse(ctx, bx, y + 3.4, 1.7, 1, 'rgba(255,120,130,0.45)', false);
+  if (beard) {
+    shape(ctx, (c) => {
+      c.moveTo(x - 8.8, y + 1.4);
+      c.quadraticCurveTo(x - 8.6, y + 12, x - 0.6, y + 12.2);
+      c.quadraticCurveTo(x + 8, y + 11.6, x + 8.8, y + 1.6);
+      c.quadraticCurveTo(x + 4.6, y + 6.6, x - 1, y + 6.4);
+      c.quadraticCurveTo(x - 6, y + 6.2, x - 8.8, y + 1.4);
+    }, beard);
+  } else {
+    ctx.beginPath();
+    ctx.moveTo(x - 3, y + 6.4);
+    ctx.quadraticCurveTo(x - 1.2, y + 5.3, x + 0.6, y + 6.4);
+    ctx.lineWidth = 0.8;
+    ctx.strokeStyle = C.lash;
+    ctx.lineCap = 'round';
+    ctx.stroke();
+  }
+  if (mustache) {
+    const [mx, my] = [x - 1.3, y + 4.4];
+    shape(ctx, (c) => {
+      c.moveTo(mx, my - 0.9);
+      c.quadraticCurveTo(mx - 3, my - 1.7, mx - 4.6, my + 1.8);
+      c.quadraticCurveTo(mx - 2, my + 0.7, mx, my + 0.7);
+      c.quadraticCurveTo(mx + 2, my + 0.7, mx + 4.6, my + 1.8);
+      c.quadraticCurveTo(mx + 3, my - 1.7, mx, my - 0.9);
+    }, mustache);
+  }
+  ellipse(ctx, x - 1.4, y + 3, 1.4, 1.1, nose, false);
+}
+
+// Dome for the hard hats and the knit beanie: a half disc over the brow.
+function workerDome(ctx, r, fill) {
+  const [x, y] = WORKER_HEAD;
+  ctx.beginPath();
+  ctx.arc(x + 0.3, y - 3.6, r, Math.PI, 0);
+  ctx.closePath();
+  ctx.fillStyle = fill;
+  ctx.fill();
+  outline(ctx);
+}
+
+// Yard keeper (dvornik): quilted vatnik under an orange vest, ushanka, and a
+// big plywood snow shovel with snow still on it.
+function workerJanitor(step) {
+  return workerFrame(step, ['#3a4050', '#2c313e'], (ctx) => {
+    const coat = '#3d4657';
+    workerTorso(ctx, coat, (c) => {
+      c.beginPath();
+      c.moveTo(0, 24.5);
+      c.lineTo(14.6, 22);
+      c.lineTo(18.6, 29.5);
+      c.lineTo(22.6, 22);
+      c.lineTo(40, 24.5);
+      c.lineTo(40, 45);
+      c.lineTo(0, 45);
+      c.closePath();
+      c.fillStyle = '#ff7a1a';
+      c.fill();
+      c.fillStyle = '#e3e9f0';
+      c.fillRect(0, 32, 40, 1.7);
+      c.fillRect(0, 36.2, 40, 1.7);
+      strokePts(c, [[14.6, 22], [18.6, 29.5], [22.6, 22]], 0.8, C.outline);
+      strokePts(c, [[16.2, 25], [21, 25]], 0.5, '#56627a');
+    });
+    const [x, y] = WORKER_HEAD;
+    workerFace(ctx, { mustache: '#8a7a6a', nose: '#ff7a7a', brow: '#6a5a4a' });
+    for (const fx of [x - 10, x + 6.2]) roundRect(ctx, fx, y - 4.6, 3.8, 10, 1.8, '#5d5148');
+    ellipse(ctx, x + 0.2, y - 7.2, 9.8, 5.2, '#5d5148');
+    roundRect(ctx, x - 9.2, y - 7.4, 18.6, 4.2, 2.1, '#7b6d60');
+    // Wide plywood shovel carried in both hands, blade forward and low.
+    capsule(ctx, [[25, 25.6], [4.8, 35.6]], 1.5, WORKER_WOOD);
+    ctx.save();
+    ctx.translate(3.6, 40.8);
+    shape(ctx, (c) => {
+      c.moveTo(-5.6, -5);
+      c.lineTo(5.6, -5);
+      c.lineTo(6.8, 4);
+      c.lineTo(-6.8, 4);
+    }, '#e2b97a');
+    for (const gx of [-2.4, 2.4]) strokePts(ctx, [[gx * 0.9, -4.4], [gx * 1.1, 3.2]], 0.4, '#c49a5c');
+    strokePts(ctx, [[-6.4, 3.8], [6.4, 3.8]], 1.4, '#9aa3b5');
+    shape(ctx, (c) => {
+      c.moveTo(-6.2, 3);
+      c.quadraticCurveTo(-5.6, -2.6, -2, -1.4);
+      c.quadraticCurveTo(0.6, -4.6, 3.8, -1.8);
+      c.quadraticCurveTo(6.6, -0.8, 6.2, 3);
+    }, '#f6f9ff');
+    shape(ctx, (c) => {
+      c.moveTo(-0.2, -5);
+      c.lineTo(3.2, -5);
+      c.lineTo(1.8, -6.6);
+    }, '#9aa3b5');
+    ctx.restore();
+    const quilt = { at: [0.35, 0.7], width: 0.5, color: '#56627a' };
+    workerArm(ctx, [26.5, 25.5], [21.6, 27.3], coat, WORKER_GLOVE, quilt);
+    workerArm(ctx, [12, 25.5], [10, 33], coat, WORKER_GLOVE, quilt);
+  });
+}
+
+// Builder: hi-vis padded jacket, orange hard hat, sledgehammer resting on the
+// back shoulder.
+function workerBuilder(step) {
+  return workerFrame(step, ['#3c4a68', '#2e3a54'], (ctx) => {
+    const coat = '#c8de34';
+    workerTorso(ctx, coat, (c) => {
+      c.fillStyle = '#e3e9f0';
+      c.fillRect(0, 31.4, 40, 1.8);
+      c.fillRect(0, 35.8, 40, 1.8);
+      strokePts(c, [[19.4, 22], [19, 42]], 0.8, '#9fb32a');
+    });
+    // Sledgehammer handle across the chest, head over the back shoulder.
+    capsule(ctx, [[10.5, 30.5], [34, 20.6]], 1.6, WORKER_WOOD);
+    ctx.save();
+    ctx.translate(34.6, 20.4);
+    ctx.rotate(-0.4);
+    roundRect(ctx, -2.6, -4.4, 5.2, 8.8, 1, '#5a6072');
+    strokePts(ctx, [[-1.4, -3.4], [-1.4, 3.4]], 0.7, '#8a90a2');
+    ctx.restore();
+    const [x, y] = WORKER_HEAD;
+    workerFace(ctx, { stubble: 'rgba(70,74,96,0.22)', mustache: '#4a3226' });
+    workerDome(ctx, 9.4, '#ff8a2a');
+    ctx.beginPath();
+    ctx.arc(x + 0.3, y - 3.6, 6.4, Math.PI * 1.08, Math.PI * 1.92);
+    ctx.lineWidth = 1.2;
+    ctx.strokeStyle = '#e06a14';
+    ctx.stroke();
+    roundRect(ctx, x - 12.4, y - 4.6, 22.6, 2.4, 1.2, '#ff8a2a');
+    ellipse(ctx, x - 4, y - 9.2, 2, 1, 'rgba(255,255,255,0.5)', false);
+    workerArm(ctx, [12, 25.5], [11.2, 30.2], coat, '#5a6072', { at: [0.55], width: 1.4, color: '#e3e9f0' });
+  });
+}
+
+// Steelworker (stalevar): grey heat-proof jacket, felt hat with blue goggles
+// pushed up, long tongs holding a red-hot billet.
+function workerSteel(step) {
+  return workerFrame(step, ['#7d786f', '#64605a'], (ctx) => {
+    const coat = '#8f8a80';
+    workerTorso(ctx, coat, (c) => {
+      strokePts(c, [[19.4, 22], [19, 42]], 0.7, '#6e6a62');
+      for (const px of [10.6, 22]) {
+        roundRect(c, px, 32.6, 6, 5, 0.8, '#7d786f');
+        strokePts(c, [[px + 0.3, 34], [px + 5.7, 34]], 0.6, C.outline);
+      }
+    });
+    shape(ctx, (c) => {
+      c.moveTo(13.2, 21.6);
+      c.lineTo(17, 27);
+      c.lineTo(19.2, 22);
+    }, '#a8a397');
+    shape(ctx, (c) => {
+      c.moveTo(25.4, 21.6);
+      c.lineTo(21.2, 26.4);
+      c.lineTo(19.6, 22);
+    }, '#a8a397');
+    const [x, y] = WORKER_HEAD;
+    workerFace(ctx, { mustache: '#2f2622', brow: '#2f2622', smudge: 'rgba(60,50,50,0.35)' });
+    shape(ctx, (c) => {
+      c.moveTo(x - 13, y - 3.2);
+      c.quadraticCurveTo(x - 0.4, y - 7.6, x + 12.2, y - 3.4);
+      c.quadraticCurveTo(x - 0.4, y - 4.6, x - 13, y - 3.2);
+    }, '#bfb8a8');
+    roundRect(ctx, x - 7, y - 13.8, 14.4, 9.6, [6, 6, 1, 1], '#d9d4c8');
+    strokePts(ctx, [[x - 1.6, y - 13.4], [x + 0.4, y - 11.4]], 0.6, '#a8a090');
+    strokePts(ctx, [[x - 6.6, y - 8.2], [x + 7, y - 8.2]], 1.2, '#3b3f4c');
+    for (const gx of [x - 5.4, x - 1.4]) {
+      ellipse(ctx, gx, y - 8.4, 2.1, 1.9, '#3d7bd9');
+      ellipse(ctx, gx - 0.6, y - 9, 0.7, 0.5, 'rgba(255,255,255,0.75)', false);
+    }
+    // Red-hot billet held low in long smith's tongs.
+    const [bx, by] = [3, 41.6];
+    const glow = ctx.createRadialGradient(bx, by, 1, bx, by, 7);
+    glow.addColorStop(0, 'rgba(255,170,60,0.6)');
+    glow.addColorStop(1, 'rgba(255,120,40,0)');
+    ctx.fillStyle = glow;
+    ctx.fillRect(bx - 7, by - 7, 14, 14);
+    const hot = ctx.createLinearGradient(bx - 4, by, bx + 4, by);
+    hot.addColorStop(0, '#ff5a1a');
+    hot.addColorStop(0.45, '#ffe27a');
+    hot.addColorStop(1, '#ff7a2a');
+    ctx.save();
+    ctx.translate(bx, by);
+    ctx.rotate(-0.12);
+    roundRect(ctx, -4.2, -1.9, 8.4, 3.8, 0.9, hot);
+    ctx.restore();
+    for (const [sx, sy, r] of [[-1, 37.2, 0.5], [2, 35.8, 0.4], [-2, 39.4, 0.35]]) ellipse(ctx, sx, sy, r, r, '#ffd23f', false);
+    capsule(ctx, [[11.4, 29.6], [8.4, 37], [6.4, 39.6]], 0.8, '#4b4f5c');
+    capsule(ctx, [[12.4, 30.6], [8.4, 37], [6.8, 43.4]], 0.8, '#4b4f5c');
+    ellipse(ctx, 8.4, 37, 0.8, 0.8, '#8a8fa8');
+    workerArm(ctx, [12, 25.5], [10.6, 30.6], coat, '#b07a4a');
+  });
+}
+
+// Tractor-plant mechanic: blue overalls over a burgundy sweater, peaked cap,
+// big spanner raised, oil on his cheek and bib.
+function workerMechanic(step) {
+  return workerFrame(step, ['#3a63b0', '#2d4f90'], (ctx) => {
+    const sweater = '#8e3a4a';
+    const blue = '#3a63b0';
+    workerTorso(ctx, sweater, (c) => {
+      c.beginPath();
+      c.moveTo(10.6, 28);
+      c.lineTo(26.4, 28);
+      c.lineTo(27, 33.4);
+      c.lineTo(40, 33.4);
+      c.lineTo(40, 45);
+      c.lineTo(0, 45);
+      c.lineTo(0, 33.4);
+      c.lineTo(10, 33.4);
+      c.closePath();
+      c.fillStyle = blue;
+      c.fill();
+      c.lineWidth = 0.8;
+      c.strokeStyle = C.outline;
+      c.stroke();
+      roundRect(c, 15.4, 29.2, 6, 3.6, 0.6, '#2d4f90');
+      ellipse(c, 23, 37.2, 2.4, 1.2, 'rgba(40,36,44,0.5)', false);
+    });
+    for (const [a, b] of [[[11.6, 28.4], [13, 22.8]], [[25.4, 28.4], [24.4, 22.8]]]) {
+      capsule(ctx, [a, b], 1.4, blue);
+      ellipse(ctx, a[0], a[1], 0.9, 0.9, C.gold);
+    }
+    const [x, y] = WORKER_HEAD;
+    workerFace(ctx, { stubble: 'rgba(70,74,96,0.22)', mustache: '#6a4a36', smudge: 'rgba(40,36,44,0.45)' });
+    ellipse(ctx, x + 0.6, y - 7, 9.4, 4.6, '#2c4a88');
+    roundRect(ctx, x - 8.8, y - 6.4, 18, 2.8, 1.2, '#22396a');
+    shape(ctx, (c) => {
+      c.moveTo(x - 7.6, y - 4.6);
+      c.quadraticCurveTo(x - 12.6, y - 4.8, x - 14, y - 2.6);
+      c.quadraticCurveTo(x - 10, y - 2.2, x - 6.4, y - 3.4);
+    }, '#22396a');
+    ellipse(ctx, x + 1, y - 11.4, 1, 0.7, '#22396a');
+    // Spanner raised in the front hand.
+    capsule(ctx, [[8.6, 33.2], [4.4, 22]], 1.8, '#c9ced9');
+    ctx.save();
+    ctx.translate(4.1, 21.2);
+    ctx.rotate(-0.36);
+    shape(ctx, (c) => {
+      c.moveTo(-1, 1);
+      c.lineTo(-3, -1.5);
+      c.lineTo(-2.6, -4.6);
+      c.lineTo(-0.9, -4.6);
+      c.lineTo(-0.9, -2.2);
+      c.lineTo(0.9, -2.2);
+      c.lineTo(0.9, -4.6);
+      c.lineTo(2.6, -4.6);
+      c.lineTo(3, -1.5);
+      c.lineTo(1, 1);
+    }, '#c9ced9');
+    ctx.restore();
+    workerArm(ctx, [12, 25.5], [7.8, 31], sweater, C.skin);
+  });
+}
+
+// Lineman: white helmet with a lightning sticker, coil of cable over the
+// shoulder, tool belt with pliers and a screwdriver.
+function workerLineman(step) {
+  return workerFrame(step, ['#2a3550', '#1f2840'], (ctx) => {
+    const coat = '#2f5687';
+    workerTorso(ctx, coat, (c) => {
+      strokePts(c, [[19.4, 22], [19, 42]], 0.7, '#24446c');
+      c.fillStyle = '#5a3e2a';
+      c.fillRect(0, 34.4, 40, 2.6);
+    });
+    roundRect(ctx, 14, 34.1, 2.8, 3.2, 0.6, '#c9ced9');
+    roundRect(ctx, 21, 34.8, 5.2, 5.8, 1, '#7a5236');
+    capsule(ctx, [[22.2, 35], [21.4, 32.2]], 0.9, C.red);
+    capsule(ctx, [[23.8, 35], [24.6, 32.4]], 0.9, C.red);
+    capsule(ctx, [[26.6, 35.4], [27.4, 32.6]], 1, C.gold);
+    const [x, y] = WORKER_HEAD;
+    workerFace(ctx, { beard: '#c06a2a', mustache: '#a8561e', brow: '#a8561e' });
+    workerDome(ctx, 9.4, '#f2f2f6');
+    ellipse(ctx, x - 0.4, y - 3.8, 10.8, 1.5, '#f2f2f6');
+    shape(ctx, (c) => {
+      c.moveTo(x + 3.6, y - 10.6);
+      c.lineTo(x + 1.6, y - 7.4);
+      c.lineTo(x + 3.2, y - 7.4);
+      c.lineTo(x + 2.2, y - 4.8);
+      c.lineTo(x + 5.2, y - 8.4);
+      c.lineTo(x + 3.6, y - 8.4);
+      c.lineTo(x + 4.8, y - 10.6);
+    }, C.gold, false);
+    workerArm(ctx, [12, 25.5], [10.4, 35], coat, '#e04848');
+    // Cable coil hanging over the front shoulder.
+    for (const [dx, color] of [[0.9, '#d99a1e'], [0, '#f2b632']]) {
+      ctx.save();
+      ctx.translate(12.6 + dx, 29.6);
+      ctx.rotate(-0.18);
+      ctx.beginPath();
+      ctx.ellipse(0, 0, 4.4, 7.4, 0, 0, Math.PI * 2);
+      ctx.lineWidth = 1.8 + OW * 2;
+      ctx.strokeStyle = C.outline;
+      ctx.stroke();
+      ctx.lineWidth = 1.8;
+      ctx.strokeStyle = color;
+      ctx.stroke();
+      ctx.restore();
+    }
+    ellipse(ctx, 10.4, 35.6, 2.3, 2.3, '#e04848');
+  });
+}
+
+// Trucker: red flannel shirt under a green puffer vest, mustard knit beanie,
+// full beard, a red toolbox in the back hand.
+function workerTrucker(step) {
+  return workerFrame(step, ['#45577a', '#36466a'], (ctx) => {
+    const flannel = '#c23b3b';
+    const check = { at: [0.3, 0.65], width: 0.6, color: '#7a1f2a' };
+    workerArm(ctx, [27.5, 25.5], [33.4, 32.6], flannel, '#4b3a2a');
+    roundRect(ctx, 29.2, 34.2, 10.6, 7.2, 1.2, '#d23c3c');
+    strokePts(ctx, [[29.8, 36.4], [39.2, 36.4]], 0.7, '#8a2430');
+    roundRect(ctx, 33.4, 35.6, 2, 1.6, 0.3, C.gold, false);
+    capsule(ctx, [[31.4, 34.2], [31.4, 32.4], [35.4, 32.4], [35.4, 34.2]], 0.8, '#8a8fa8');
+    ellipse(ctx, 33.4, 32.6, 2.3, 2.3, '#4b3a2a');
+    workerTorso(ctx, flannel, (c) => {
+      for (let gx = 6; gx < 34; gx += 2.6) strokePts(c, [[gx, 18], [gx, 44]], 0.6, 'rgba(90,20,30,0.55)');
+      for (let gy = 22; gy < 44; gy += 2.6) strokePts(c, [[0, gy], [40, gy]], 0.6, 'rgba(90,20,30,0.55)');
+      c.fillStyle = '#2e5e4e';
+      c.fillRect(0, 18, 11.4, 30);
+      c.fillRect(15.6, 18, 30, 30);
+      for (const y of [27, 31, 35, 38.6]) {
+        strokePts(c, [[0, y], [11.4, y]], 0.6, '#1f4438');
+        strokePts(c, [[15.6, y], [40, y]], 0.6, '#1f4438');
+      }
+      strokePts(c, [[11.4, 18], [11.4, 44]], 0.8, C.outline);
+      strokePts(c, [[15.6, 18], [15.6, 44]], 0.8, C.outline);
+    });
+    const [x, y] = WORKER_HEAD;
+    workerFace(ctx, { beard: '#4a3226', mustache: '#3a271e' });
+    workerDome(ctx, 9.4, '#d9a33a');
+    roundRect(ctx, x - 9.8, y - 6.2, 19.8, 4.4, 2.2, '#c48e2a');
+    for (let rx = x - 8.4; rx < x + 9; rx += 1.6) strokePts(ctx, [[rx, y - 5.6], [rx, y - 2.4]], 0.5, '#a8761e');
+    workerArm(ctx, [12, 25.5], [9, 33.6], flannel, '#4b3a2a', check);
+  });
+}
+
+const WORKERS = [workerJanitor, workerBuilder, workerSteel, workerMechanic, workerLineman, workerTrucker];
+
 function chair(ctx) {
   for (const x of [4, 24]) capsule(ctx, [[14, 33], [x, 37]], 2, C.suitShade);
   capsule(ctx, [[14, 33], [14, 37.5]], 2, C.suitShade);
@@ -348,6 +790,184 @@ function star(ctx, cx, cy, r, color) {
   ctx.fill();
 }
 
+// Ruble sign from strokes, so it does not depend on the font: stem, bowl and
+// two bars. (x, y) is the centre, s the height.
+function rubleSign(ctx, x, y, s, color, width) {
+  const l = x - s * 0.22;
+  ctx.beginPath();
+  ctx.moveTo(l, y + s * 0.5);
+  ctx.lineTo(l, y - s * 0.5);
+  ctx.lineTo(x + s * 0.06, y - s * 0.5);
+  ctx.arc(x + s * 0.06, y - s * 0.25, s * 0.25, -Math.PI / 2, Math.PI / 2);
+  ctx.lineTo(l - s * 0.16, y);
+  ctx.moveTo(l - s * 0.16, y + s * 0.22);
+  ctx.lineTo(x + s * 0.12, y + s * 0.22);
+  ctx.lineWidth = width;
+  ctx.strokeStyle = color;
+  ctx.lineCap = 'round';
+  ctx.lineJoin = 'round';
+  ctx.stroke();
+}
+
+// --- Backrooms (level 2) -----------------------------------------------------
+
+// Bundle of banknotes seen from the long side: bill face, stacked edges, a
+// paper band with the ruble sign and the denomination.
+const BILLS = {
+  green: { face: '#6cc08e', edge: '#3f8a62', label: '1000' },
+  blue: { face: '#73a3dc', edge: '#3f6aa8', label: '2000' },
+};
+
+function cashBundle(ctx, x, y, bill, tilt = 0) {
+  const { face, edge, label } = BILLS[bill];
+  const [w, h] = [13.4, 6.6];
+  ctx.save();
+  ctx.translate(x + w / 2, y + h / 2);
+  ctx.rotate(tilt);
+  roundRect(ctx, -w / 2, -h / 2, w, h, 1.2, face);
+  for (const ly of [-1.4, 1.4]) strokePts(ctx, [[-w / 2 + 0.9, ly], [w / 2 - 0.9, ly]], 0.35, edge);
+  ellipse(ctx, w * 0.3, 0, 1.6, 2, 'rgba(255,255,255,0.4)', false);
+  text(ctx, label, -w * 0.29, 0.2, 2.6, C.white, 800);
+  ctx.fillStyle = '#f6efd9';
+  ctx.fillRect(-0.2, -h / 2, 3.6, h);
+  for (const bx of [-0.2, 3.4]) strokePts(ctx, [[bx, -h / 2 + 0.2], [bx, h / 2 - 0.2]], 0.45, C.outline);
+  rubleSign(ctx, 1.7, 0, 2.8, edge, 0.5);
+  ctx.restore();
+}
+
+// Canvas cash sack with a tied neck and a big ruble sign.
+function cashBag(ctx) {
+  const canvas = '#dcc48e';
+  const fold = '#b89c64';
+  shape(ctx, (c) => {
+    c.moveTo(17, 11);
+    c.quadraticCurveTo(6.5, 19, 7.6, 30);
+    c.quadraticCurveTo(8.6, 37, 22, 37);
+    c.quadraticCurveTo(35.4, 37, 36.4, 30);
+    c.quadraticCurveTo(37.5, 19, 27, 11);
+  }, canvas);
+  shape(ctx, (c) => {
+    c.moveTo(18.4, 10.6);
+    c.lineTo(14.6, 3.6);
+    c.quadraticCurveTo(17.6, 5.2, 19.6, 2.6);
+    c.quadraticCurveTo(21.8, 5, 24, 2.2);
+    c.quadraticCurveTo(26.2, 5, 29.4, 3.6);
+    c.lineTo(25.6, 10.6);
+  }, canvas);
+  for (const fx of [18.8, 22, 25.2]) strokePts(ctx, [[fx, 6], [fx + (fx - 22) * 0.12, 9.6]], 0.5, fold);
+  strokePts(ctx, [[17.6, 13.6], [14.4, 20]], 0.6, fold);
+  strokePts(ctx, [[26.6, 13.6], [29.6, 19]], 0.6, fold);
+  capsule(ctx, [[17.4, 10.8], [26.6, 10.8]], 1.8, '#a8763e');
+  for (const [ex, rot] of [[19.6, 0.5], [24.4, -0.5]]) {
+    ctx.save();
+    ctx.translate(ex, 12.4);
+    ctx.rotate(rot);
+    ellipse(ctx, 0, 0, 1.2, 2.2, '#a8763e');
+    ctx.restore();
+  }
+  rubleSign(ctx, 22.6, 21, 8, '#3f8a62', 1.8);
+}
+
+// Pile of cash on the floor: a tied sack behind a stack of bundles, a few
+// loose bills. Wide and mid-height: a normal jump clears it.
+function money(ctx) {
+  ellipse(ctx, 22, 39.4, 21, 1.4, 'rgba(0,0,0,0.16)', false);
+  cashBag(ctx);
+  // A bundle leaning on the sack's shoulder.
+  cashBundle(ctx, 27.6, 18.6, 'green', 0.42);
+  // Two loose bills slipped off the pile.
+  for (const [lx, ly, rot, bill] of [[5, 30.4, -0.45, 'blue'], [38.2, 30.2, 0.55, 'green']]) {
+    ctx.save();
+    ctx.translate(lx, ly);
+    ctx.rotate(rot);
+    roundRect(ctx, -4.2, -2, 8.4, 4, 0.6, BILLS[bill].face);
+    ellipse(ctx, 1.8, 0, 1, 1.3, 'rgba(255,255,255,0.4)', false);
+    text(ctx, BILLS[bill].label, -1.4, 0.15, 1.7, C.white, 800);
+    ctx.restore();
+  }
+  cashBundle(ctx, 9, 26.4, 'blue', -0.05);
+  cashBundle(ctx, 21.6, 26.6, 'green', 0.04);
+  cashBundle(ctx, 1.6, 32.8, 'green');
+  cashBundle(ctx, 15.2, 32.8, 'blue');
+  cashBundle(ctx, 28.8, 32.8, 'green');
+}
+
+// Heavy steel safe on stubby feet: combination dial, wheel handle, brass
+// keyhole plate, hinges and rivets.
+function safe(ctx) {
+  const steel = '#4f6159';
+  const steelLight = '#62786d';
+  const steelDark = '#33403a';
+  const chrome = '#c9ced9';
+  for (const fx of [4.6, 30.8]) roundRect(ctx, fx, 41, 4.6, 4.4, [0, 0, 1.8, 1.8], steelDark);
+  roundRect(ctx, 2, 3, 36, 39.4, 3, steel);
+  strokePts(ctx, [[5.4, 5.2], [34.6, 5.2]], 1, steelLight);
+  for (const [rx, ry] of [[4.2, 5.2], [35.8, 5.2], [4.2, 40.2], [35.8, 40.2], [4.2, 22.7], [35.8, 22.7], [20, 40.2]]) {
+    ellipse(ctx, rx, ry, 0.75, 0.75, '#8fa298', false);
+    ellipse(ctx, rx + 0.2, ry + 0.25, 0.4, 0.4, steelDark, false);
+  }
+  roundRect(ctx, 6, 7.4, 28, 30.6, 2, steelLight);
+  roundRect(ctx, 8, 9.4, 24, 26.6, 1.4, steel, false);
+  for (const hy of [11.4, 30.4]) roundRect(ctx, 33.2, hy, 2.4, 4.6, 1, '#8fa298');
+  // Shine across the door.
+  ctx.save();
+  ctx.beginPath();
+  ctx.roundRect(6, 7.4, 28, 30.6, 2);
+  ctx.clip();
+  ctx.fillStyle = 'rgba(255,255,255,0.08)';
+  ctx.beginPath();
+  ctx.moveTo(10, 7);
+  ctx.lineTo(17, 7);
+  ctx.lineTo(9, 38);
+  ctx.lineTo(2, 38);
+  ctx.closePath();
+  ctx.fill();
+  ctx.restore();
+  // Combination dial.
+  const [dx, dy] = [20, 17.4];
+  ellipse(ctx, dx, dy, 6.2, 6.2, steelDark);
+  ellipse(ctx, dx, dy, 4.8, 4.8, chrome, false);
+  for (let i = 0; i < 12; i++) {
+    const a = (i * Math.PI) / 6;
+    const r0 = i % 3 ? 3.9 : 3.3;
+    strokePts(ctx, [[dx + Math.cos(a) * r0, dy + Math.sin(a) * r0], [dx + Math.cos(a) * 4.5, dy + Math.sin(a) * 4.5]], 0.4, steelDark);
+  }
+  ellipse(ctx, dx, dy, 2, 2, '#8a949c');
+  strokePts(ctx, [[dx, dy - 1.6], [dx, dy - 0.4]], 0.6, C.white);
+  shape(ctx, (c) => {
+    c.moveTo(dx - 1, dy - 7.4);
+    c.lineTo(dx + 1, dy - 7.4);
+    c.lineTo(dx, dy - 5.8);
+  }, C.red, false);
+  // Wheel handle: four long chrome spokes with ball knobs, thin outlines.
+  const [wx, wy] = [14.4, 29.4];
+  const ends = [0, 1, 2, 3].map((i) => {
+    const a = 0.25 + (i * Math.PI) / 2;
+    return [wx + Math.cos(a) * 5.4, wy + Math.sin(a) * 5.4];
+  });
+  for (const end of ends) strokePts(ctx, [[wx, wy], end], 2.2, C.outline);
+  for (const end of ends) strokePts(ctx, [[wx, wy], end], 1.1, chrome);
+  for (const [ex, ey] of ends) {
+    ellipse(ctx, ex, ey, 1.4, 1.4, chrome, false);
+    ctx.lineWidth = 0.6;
+    ctx.strokeStyle = C.outline;
+    ctx.stroke();
+    ellipse(ctx, ex - 0.4, ey - 0.4, 0.45, 0.45, C.white, false);
+  }
+  ellipse(ctx, wx, wy, 2.2, 2.2, chrome);
+  ellipse(ctx, wx - 0.6, wy - 0.6, 0.6, 0.6, C.white, false);
+  // Brass keyhole plate.
+  roundRect(ctx, 24, 25.8, 6, 7.8, 1.4, '#d9a83a');
+  ellipse(ctx, 25, 27, 0.8, 0.8, 'rgba(255,255,255,0.5)', false);
+  ellipse(ctx, 27, 28.8, 0.9, 0.9, steelDark, false);
+  shape(ctx, (c) => {
+    c.moveTo(26.6, 29.2);
+    c.lineTo(27.4, 29.2);
+    c.lineTo(27.9, 31.6);
+    c.lineTo(26.1, 31.6);
+  }, steelDark, false);
+}
+
 function logo(ctx) {
   const g = ctx.createRadialGradient(15, 13, 2, 20, 20, 19);
   g.addColorStop(0, '#6bd884');
@@ -361,51 +981,6 @@ function logo(ctx) {
   ctx.rotate(-0.6);
   ellipse(ctx, 0, 0, 4.2, 2, 'rgba(255,255,255,0.45)', false);
   ctx.restore();
-}
-
-// Flying meeting invite: calendar with flapping wings. Slide under it.
-function wing(ctx, side, angle) {
-  ctx.save();
-  ctx.translate(side < 0 ? 15 : 41, 15);
-  ctx.scale(side, 1);
-  ctx.rotate(-angle);
-  for (const [ox, oy, rx, ry, rot] of [[6.5, 4.6, 5.4, 2.4, 0.3], [7.8, 1.4, 6.6, 2.8, 0], [6.4, -2, 7, 3.2, -0.35]]) {
-    ctx.save();
-    ctx.translate(ox, oy);
-    ctx.rotate(rot);
-    ellipse(ctx, 0, 0, rx, ry, C.white);
-    ctx.restore();
-  }
-  ctx.restore();
-}
-
-function meeting(angle, dy) {
-  return (ctx) => {
-    ctx.translate(0, dy);
-    wing(ctx, -1, angle);
-    wing(ctx, 1, angle);
-    roundRect(ctx, 14, 4, 28, 27, 3.5, C.white);
-    ctx.save();
-    ctx.beginPath();
-    ctx.roundRect(14, 4, 28, 27, 3.5);
-    ctx.clip();
-    ctx.fillStyle = C.red;
-    ctx.fillRect(14, 4, 28, 8.5);
-    ctx.restore();
-    ctx.beginPath();
-    ctx.roundRect(14, 4, 28, 27, 3.5);
-    ctx.lineWidth = OW;
-    ctx.strokeStyle = C.outline;
-    ctx.stroke();
-    text(ctx, 'СОЗВОН', 28, 8.4, 3.8, C.white);
-    for (const x of [20, 36]) capsule(ctx, [[x, 2.4], [x, 5.6]], 1.4, C.gray);
-    for (let row = 0; row < 3; row++) {
-      for (let col = 0; col < 4; col++) {
-        const hot = row === 1 && col === 2;
-        roundRect(ctx, 17 + col * 6, 15 + row * 5, 4, 3.4, 0.8, hot ? C.red : C.paperShade, false);
-      }
-    }
-  };
 }
 
 // --- Pickups -----------------------------------------------------------------
@@ -719,19 +1294,31 @@ export function buildSprites() {
     hero: buildHero(UNIT),
     heroDown: buildHeroDown(UNIT),
     elder: {
-      ...sheet(ELDERS.flatMap((draw) => ELDER_STEPS.map(draw)), 36, 40, ELDER_SCALE),
+      // Drawn 4 units down in a taller frame: headroom for tall hats.
+      ...sheet(
+        ELDERS.flatMap((draw) => ELDER_STEPS.map(draw)).map((frame) => (ctx) => {
+          ctx.translate(0, 4);
+          frame(ctx);
+        }),
+        36,
+        44,
+        ELDER_SCALE,
+      ),
       anims: Object.fromEntries(ELDERS.map((_, i) => [`walk${i}`, { frames: [i * 2, i * 2 + 1], fps: 4 }])),
       variants: true,
-      body: toPx(UNIT * ELDER_SCALE)({ x: 5, y: 4, w: 24, h: 35 }),
+      body: toPx(UNIT * ELDER_SCALE)({ x: 5, y: 8, w: 24, h: 35 }),
+    },
+    worker: {
+      ...sheet(WORKERS.flatMap((draw) => WORKER_STEPS.map(draw)), 47, 50, WORKER_SCALE),
+      anims: Object.fromEntries(WORKERS.map((_, i) => [`walk${i}`, { frames: [i * 2, i * 2 + 1], fps: 4 }])),
+      variants: true,
+      body: toPx(UNIT * WORKER_SCALE)({ x: 11, y: 7.4, w: 25, h: 42 }),
     },
     chair: { ...sheet([chair], 28, 42), body: px({ x: 3, y: 2, w: 22, h: 39 }) },
     shelf: { ...sheet([shelf], 48, 114), body: px({ x: 3, y: 1, w: 42, h: 112 }) },
+    money: { ...sheet([money], 44, 40, VAULT_SCALE), body: toPx(UNIT * VAULT_SCALE)({ x: 3, y: 6.4, w: 38, h: 33 }) },
+    safe: { ...sheet([safe], 40, 46, VAULT_SCALE), body: toPx(UNIT * VAULT_SCALE)({ x: 2.6, y: 3.6, w: 34.8, h: 41.8 }) },
     logo: { ...sheet([logo], 40, 40), body: px({ x: 2, y: 2, w: 36, h: 36 }), circle: px({ x: 20, y: 20, r: 18 }) },
-    meeting: {
-      ...sheet([meeting(0.55, 0), meeting(0, 0.6), meeting(-0.55, 1.2)], 56, 36),
-      anims: { flap: { frames: [0, 1, 2, 1], fps: 10 } },
-      body: px({ x: 14, y: 4, w: 28, h: 28 }),
-    },
     coffee: {
       ...sheet([coffee(0), coffee(Math.PI)], 24, 32),
       anims: { steam: { frames: [0, 1], fps: 3 } },

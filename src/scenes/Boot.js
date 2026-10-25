@@ -10,7 +10,7 @@ import { computeMetrics, metrics } from '../systems/metrics.js';
 import { makeFxTextures } from '../systems/textures.js';
 import { addText } from '../ui/text.js';
 
-const LOOPING = new Set(['run', 'idle', 'slide', 'walk', 'flap', 'steam', 'prone', 'sit', 'spin']);
+const LOOPING = new Set(['run', 'idle', 'walk', 'flap', 'steam', 'prone', 'sit', 'spin']);
 
 // Turns the art canvases into textures and animations, derives sizes from
 // their metadata, and starts the menu.
@@ -25,8 +25,8 @@ export class BootScene extends Phaser.Scene {
     computeMetrics(sprites);
 
     const backgrounds = buildBackgrounds();
-    for (const zone of CONFIG.zones) {
-      for (const layer of ['far', 'mid', 'floor']) this.registerCanvas(`bg-${zone.key}-${layer}`, backgrounds[zone.key][layer]);
+    for (const [zone, layers] of Object.entries(backgrounds)) {
+      for (const [name, canvas] of Object.entries(layers)) this.registerCanvas(`bg-${zone}-${name}`, canvas);
     }
 
     makeFxTextures(this, metrics);

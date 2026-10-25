@@ -111,7 +111,7 @@ export class Spawner {
     return { type, intro };
   }
 
-  // Coin rows in free gaps, coins over/under obstacles, chocolates and the
+  // Coin rows in free gaps, coins over obstacles, chocolates and the
   // level's few coffees.
   planPickups(prev, next, meters) {
     const hero = metrics.hero;
@@ -124,7 +124,7 @@ export class Spawner {
     const freeEnd = next.arrival - nextTiming.lead;
     const free = freeEnd - freeStart;
     const mid = (freeStart + freeEnd) / 2;
-    const groundH = hero.slideH / 2; // collectible standing or sliding
+    const groundH = hero.standH / 3; // picked up just by running
 
     // Chocolate and coffee float just above the standing head: they need a hop.
     if (chocolate && meters >= this.nextChocolateAt && free >= 0.6) {
@@ -147,9 +147,7 @@ export class Spawner {
     if (!coin) return;
     const kind = CONFIG.obstacles[next.type].kind;
     const top = metrics.obstacles[next.type].top;
-    if (kind === 'slide' && Math.random() < PK.underChance) {
-      this.queue.push({ kind: 'coin', arrival: next.arrival, height: groundH });
-    } else if (kind !== 'slide' && Math.random() < PK.overChance) {
+    if (Math.random() < PK.overChance) {
       // Reward for clearing it; kept within reach of the jump that clears it.
       const reach = hero.standH + jump.apex + (kind === 'double' ? jump.extra : 0);
       const height = Math.min(top + 4 * SCALE + coin.h / 2, reach - coin.h / 2 - 2 * SCALE);

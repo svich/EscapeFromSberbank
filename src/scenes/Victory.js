@@ -52,8 +52,8 @@ export class VictoryScene extends Phaser.Scene {
       ['Лучший KPI', `${data.bestScore}${data.newBestScore ? '  НОВЫЙ!' : ''}`, data.newBestScore ? '#7ee08f' : undefined],
     ]);
 
-    const prompt = addText(this, W / 2, 680, 'R / Пробел / тап  —  ещё забег', { size: 48, weight: 700, color: '#7ee08f', origin: [0.5, 0] }).setDepth(6);
-    addText(this, W / 2, 750, 'M / Esc  —  меню', { size: 36, origin: [0.5, 0] }).setDepth(6);
+    const prompt = addText(this, W / 2, 680, 'ПРОБЕЛ  —  ещё забег', { size: 48, weight: 700, color: '#7ee08f', origin: [0.5, 0] }).setDepth(6);
+    addText(this, W / 2, 750, 'Esc  —  меню', { size: 36, origin: [0.5, 0] }).setDepth(6);
     this.tweens.add({ targets: prompt, alpha: 0.35, duration: 650, yoyo: true, repeat: -1, ease: 'Sine.easeInOut' });
 
     const confetti = { lifespan: 4200, rotate: { min: 0, max: 360 }, scale: { min: 1.5, max: 2.5 }, tint: CONFETTI };

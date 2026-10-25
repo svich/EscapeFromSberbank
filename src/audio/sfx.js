@@ -9,10 +9,6 @@ export const SFX = {
     e.tone(t + 0.06, 780, 0.09, { wave: 'pulse12', vol: 0.1, attack: 0.002, decay: 0.08, sustain: 0.2, release: 0.03, slide: 1560 });
   },
 
-  slide(e, t) {
-    e.noise(t, 0.24, { type: 'bandpass', freq: 2400, sweep: 500, q: 1.2, vol: 0.25 });
-  },
-
   land(e, t) {
     e.noise(t, 0.05, { type: 'lowpass', freq: 700, vol: 0.12 });
   },

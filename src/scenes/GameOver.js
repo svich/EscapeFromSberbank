@@ -27,7 +27,7 @@ export function addStats(scene, x, y, rows) {
   });
 }
 
-// Shared by GameOver and Victory: R/Space/Enter or tap retries, M/Esc menu.
+// Shared by GameOver and Victory: Space (also R, Enter, a tap) retries, Esc (or M) goes to the menu.
 // retry: Game scene data to start from (a level checkpoint), {} for a new run.
 // Always pass an object: Phaser reuses the last start's data when given none.
 export function bindEndInputs(scene, retry = {}) {
@@ -82,8 +82,8 @@ export class GameOverScene extends Phaser.Scene {
       ['Лучший KPI', `${data.bestScore}${newMark(data.newBestScore)}`, data.newBestScore ? '#7ee08f' : undefined],
     ]);
 
-    const prompt = addText(this, W / 2, 760, `R / Пробел / тап  —  заново «${CONFIG.zones[zone].title}»`, { size: 48, weight: 700, color: '#7ee08f', origin: [0.5, 0] }).setDepth(6);
-    addText(this, W / 2, 830, 'M / Esc  —  меню', { size: 36, origin: [0.5, 0] }).setDepth(6);
+    const prompt = addText(this, W / 2, 760, `ПРОБЕЛ  —  заново «${CONFIG.zones[zone].title}»`, { size: 48, weight: 700, color: '#7ee08f', origin: [0.5, 0] }).setDepth(6);
+    addText(this, W / 2, 830, 'Esc  —  меню', { size: 36, origin: [0.5, 0] }).setDepth(6);
     this.tweens.add({ targets: prompt, alpha: 0.35, duration: 650, yoyo: true, repeat: -1, ease: 'Sine.easeInOut' });
 
     bindEndInputs(this, data.retry);

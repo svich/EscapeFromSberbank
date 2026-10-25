@@ -182,7 +182,7 @@ const gameOffice = gameSong({
   fill: 'k . h . s . h . s . s s s s s s',
 });
 
-const gameLobby = gameSong({
+const gameBackrooms = gameSong({
   bpm: 154,
   transpose: 2,
   lead: 'leadRound',
@@ -249,7 +249,7 @@ const victory = compile({
 export const SONGS = {
   menu,
   'game-office': gameOffice,
-  'game-lobby': gameLobby,
+  'game-backrooms': gameBackrooms,
   'game-street': gameStreet,
   gameover: gameOver,
   victory,
