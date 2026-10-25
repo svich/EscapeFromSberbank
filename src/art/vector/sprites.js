@@ -634,6 +634,84 @@ function door(ctx) {
   capsule(ctx, [[13, 72], [20.5, 73.5]], 1.6, C.gray);
 }
 
+// Taxi waiting at the end of the last level, facing right. TAXI_DOOR: the
+// rear door's x as a share of the frame width (where she gets in).
+export const TAXI_DOOR = 62 / 160;
+const TAXI_YELLOW = '#ffc928';
+
+function wheel(ctx, x, y) {
+  ctx.beginPath();
+  ctx.arc(x, y, 12.5, Math.PI, 0);
+  ctx.fillStyle = C.outline;
+  ctx.fill();
+  ellipse(ctx, x, y, 10, 10, '#2b2b33');
+  ellipse(ctx, x, y, 5, 5, '#c9ccd6');
+  ellipse(ctx, x, y, 1.8, 1.8, '#8a8fa8', false);
+}
+
+function taxi(ctx) {
+  ellipse(ctx, 80, 69.5, 72, 2.5, 'rgba(0,0,0,0.18)', false);
+  // Roof sign and cabin.
+  roundRect(ctx, 66, 0.8, 30, 9, 2.5, '#fff6cf');
+  text(ctx, 'ТАКСИ', 81, 5.5, 5.6, C.outline, 800);
+  shape(ctx, (c) => {
+    c.moveTo(36, 32);
+    c.lineTo(46, 12);
+    c.quadraticCurveTo(48, 9.5, 52, 9.5);
+    c.lineTo(100, 9.5);
+    c.quadraticCurveTo(104, 9.5, 107, 12);
+    c.lineTo(124, 32);
+  }, TAXI_YELLOW);
+  const glass = ctx.createLinearGradient(0, 14, 0, 30);
+  glass.addColorStop(0, '#e4f4ff');
+  glass.addColorStop(1, '#9fd0f2');
+  shape(ctx, (c) => {
+    c.moveTo(43, 30);
+    c.lineTo(51, 14);
+    c.lineTo(77, 14);
+    c.lineTo(77, 30);
+  }, glass);
+  shape(ctx, (c) => {
+    c.moveTo(82, 30);
+    c.lineTo(82, 14);
+    c.lineTo(101, 14);
+    c.lineTo(117, 30);
+  }, glass);
+  strokePts(ctx, [[56, 17], [52, 26]], 1.4, 'rgba(255,255,255,0.8)');
+  strokePts(ctx, [[90, 17], [87, 26]], 1.4, 'rgba(255,255,255,0.8)');
+
+  // Body with the checker stripe, doors and lights.
+  shape(ctx, (c) => {
+    c.moveTo(8, 34);
+    c.quadraticCurveTo(10, 30, 20, 30);
+    c.lineTo(140, 30);
+    c.quadraticCurveTo(152, 31, 154, 40);
+    c.lineTo(155, 52);
+    c.quadraticCurveTo(155, 58, 149, 58);
+    c.lineTo(11, 58);
+    c.quadraticCurveTo(5, 58, 5, 52);
+    c.lineTo(5, 40);
+    c.quadraticCurveTo(5, 34, 8, 34);
+  }, TAXI_YELLOW);
+  strokePts(ctx, [[20, 33], [138, 33]], 1.2, 'rgba(255,255,255,0.6)');
+  for (let i = 0; i < 28; i++) {
+    for (let row = 0; row < 2; row++) {
+      ctx.fillStyle = (i + row) % 2 ? '#ffffff' : C.outline;
+      ctx.fillRect(10 + i * 5, 38 + row * 2.6, 5, 2.6);
+    }
+  }
+  for (const x of [44, 80, 116]) strokePts(ctx, [[x, 31.5], [x, 56.5]], 0.9, C.outline);
+  capsule(ctx, [[68, 47.5], [73, 47.5]], 1.6, C.gray);
+  capsule(ctx, [[104, 47.5], [109, 47.5]], 1.6, C.gray);
+  ellipse(ctx, 118.5, 31, 2.6, 1.8, TAXI_YELLOW);
+  ellipse(ctx, 152, 40, 2.2, 3, '#fff7c2');
+  roundRect(ctx, 4.5, 37.5, 3, 6, 1, '#e04848');
+  capsule(ctx, [[148, 54.5], [156, 54.5]], 2.2, C.gray);
+  capsule(ctx, [[4, 54.5], [11, 54.5]], 2.2, C.gray);
+  wheel(ctx, 36, 59);
+  wheel(ctx, 124, 59);
+}
+
 export function buildSprites() {
   const px = toPx(UNIT);
   const sheet = (frames, fw, fh, k = 1) => renderSheet(frames, fw, fh, UNIT * k);
@@ -671,5 +749,6 @@ export function buildSprites() {
       pivot: toPx(UNIT * WING_SCALE)(WING_PIVOT),
     },
     door: { ...sheet([door], 70, 124), body: px({ x: 10, y: 26, w: 50, h: 96 }) },
+    taxi: sheet([taxi], 160, 72),
   };
 }

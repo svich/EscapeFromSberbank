@@ -61,8 +61,8 @@ export class HUDScene extends Phaser.Scene {
       if (i > 0) g.fillStyle(0xffffff, 1).fillRect(from - 2, BAR.y - 6, 4, BAR.h + 12);
       return addText(this, (from + to) / 2, BAR.y + BAR.h + 12, z.label, { size: 30, origin: [0.5, 0] }).setAlpha(0.5);
     });
-    // The exit door at the end of the bar.
-    fitHeight(this.add.image(BAR.x + BAR.w + 40, BAR.y + BAR.h + 14, 'door', 0).setOrigin(0.5, 1), 64);
+    // The taxi to freedom at the end of the bar.
+    fitHeight(this.add.image(BAR.x + BAR.w + 66, BAR.y + BAR.h + 10, 'taxi', 0).setOrigin(0.5, 1), 44);
   }
 
   changed(key) {

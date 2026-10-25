@@ -89,6 +89,15 @@ export const SFX = {
     e.noise(t, 2.2, { type: 'bandpass', freq: 260, sweep: 1400, q: 0.7, vol: 0.22 });
   },
 
+  // Honk-honk, then the engine pulling away.
+  taxi(e, t) {
+    for (const dt of [0, 0.16]) {
+      e.tone(t + dt, 440, 0.11, { wave: 'pulse25', vol: 0.08, decay: 0.1, sustain: 0.6 });
+      e.tone(t + dt, 554, 0.11, { wave: 'pulse25', vol: 0.07, decay: 0.1, sustain: 0.6 });
+    }
+    e.noise(t + 0.3, 1.4, { type: 'lowpass', freq: 160, sweep: 900, vol: 0.28 });
+  },
+
   door(e, t) {
     [392, 523, 659, 784].forEach((f, i) => {
       e.tone(t + i * 0.07, f, 0.08, { wave: 'pulse12', vol: 0.09, decay: 0.06, sustain: 0.4 });

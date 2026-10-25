@@ -1,6 +1,7 @@
 import * as Phaser from 'phaser';
 import { audio } from '../audio/index.js';
 import { CONFIG, SCALE } from '../config.js';
+import { TAXI_DOOR } from '../art/vector/sprites.js';
 import { Player } from '../objects/Player.js';
 import { storage } from '../storage.js';
 import { Backdrop } from '../systems/Backdrop.js';
@@ -18,6 +19,8 @@ const { FILL, MULTIPLY } = Phaser.TintModes;
 const px = (v) => v * SCALE;
 
 const songForZone = (zone) => `game-${CONFIG.zones[zone].key}`;
+// Where she walks to on the way out (share of the frame width).
+const EXIT_ORIGIN = { door: 0.5, taxi: TAXI_DOOR };
 // Soft pulsing halo so the power-ups read as special.
 const PICKUP_GLOW = { chocolate: 0xffc96b, coffee: 0xff9a3c };
 
@@ -160,24 +163,29 @@ export class GameScene extends Phaser.Scene {
 
   // --- world ---------------------------------------------------------------
 
-  // Coin goal reached: the exit door comes in. Walking through it ends the
-  // level (see reachExit): indoors she sets off for the next country, the
-  // last door is freedom.
+  // Coin goal reached: the way out comes in. Going through it ends the level
+  // (see reachExit): indoors she sets off for the next country through a
+  // door, on the street a taxi takes her to freedom.
   completeLevel() {
     const last = this.zone === CONFIG.zones.length - 1;
-    this.fx.popText(this.player.x, this.player.body.top - px(16), last ? 'Выход открыт!' : 'Цель выполнена!', '#7ee08f');
+    this.fx.popText(this.player.x, this.player.body.top - px(16), last ? 'Такси ждёт!' : 'Цель выполнена!', '#7ee08f');
     this.openExit();
   }
 
-  // Clears the way and brings the exit door in from the right edge.
+  exitKey() {
+    return this.zone === CONFIG.zones.length - 1 ? 'taxi' : 'door';
+  }
+
+  // Clears the way and brings the exit in from the right edge.
   openExit() {
     this.exitOpen = true;
     this.spawner.stop();
     for (const o of this.obstacles.getChildren().slice()) {
       if (!o.knocked && o.x > this.player.x - px(10)) this.knockAway(o);
     }
-    const doorW = this.textures.getFrame('door', 0).width;
-    this.finishPx = this.traveled + W + doorW / 2 - CONFIG.player.x - CONFIG.exit.offset;
+    const key = this.exitKey();
+    const right = this.textures.getFrame(key, 0).width * (1 - EXIT_ORIGIN[key]);
+    this.finishPx = this.traveled + W + right - CONFIG.player.x - CONFIG.exit.offset;
     audio.sfx('zone');
   }
 
@@ -335,8 +343,9 @@ export class GameScene extends Phaser.Scene {
   updateDoor() {
     const x = CONFIG.player.x + CONFIG.exit.offset + (this.finishPx - this.traveled);
     if (!this.door) {
-      if (x > W + this.textures.getFrame('door', 0).width) return;
-      this.door = this.add.image(x, G, 'door', 0).setOrigin(0.5, 1).setDepth(8);
+      const key = this.exitKey();
+      if (x > W + this.textures.getFrame(key, 0).width) return;
+      this.door = this.add.image(x, G, key, 0).setOrigin(EXIT_ORIGIN[key], 1).setDepth(8);
     }
     this.door.x = x;
   }
@@ -582,9 +591,18 @@ export class GameScene extends Phaser.Scene {
       onComplete: () => {
         audio.sfx('door');
         const last = this.zone === CONFIG.zones.length - 1;
-        this.tweens.add({ targets: this.player, alpha: 0, duration: 300, onComplete: () => (last ? this.finishRun(true) : this.setOff()) });
+        this.tweens.add({ targets: this.player, alpha: 0, duration: 300, onComplete: () => (last ? this.driveOff() : this.setOff()) });
       },
     });
+  }
+
+  // She's in the taxi: it pulls away, then the last flight and the congratulations.
+  driveOff() {
+    const taxi = this.door;
+    const rear = taxi.displayWidth * EXIT_ORIGIN.taxi;
+    audio.sfx('taxi');
+    this.time.addEvent({ delay: 80, repeat: 14, callback: () => this.fx.puffAt(taxi.x - rear, G - px(5), 3) });
+    this.tweens.add({ targets: taxi, x: taxi.x + W, duration: 1500, delay: 250, ease: 'Quad.easeIn', onComplete: () => this.finishRun(true) });
   }
 
   finishRun(victory) {

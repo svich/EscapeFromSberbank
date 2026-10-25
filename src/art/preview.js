@@ -64,6 +64,7 @@ const objects = [
   [obstacleRow, 'logo', 'logo ball'],
   [obstacleRow, 'meeting', 'meeting invite', 'flap'],
   [obstacleRow, 'door', 'exit door'],
+  [obstacleRow, 'taxi', 'taxi: the way out'],
   [pickupRow, 'coin', 'coin: level goal', 'spin'],
   [pickupRow, 'coffee', 'coffee: 5 s dash', 'steam'],
   [pickupRow, 'chocolate', 'chocolate: extra life'],
@@ -92,7 +93,7 @@ function tile(ctx, img, offset, y) {
 const ZONES = [
   ['office', 'Zone 1: open space', [['elder', 1200, 'walk0'], ['coin', 1650, 'spin', 700], ['chair', 2200]]],
   ['lobby', 'Zone 2: lobby', [['shelf', 1250], ['chocolate', 1750, null, 700], ['logo', 2300]]],
-  ['street', 'Zone 3: street', [['meeting', 1300, 'flap', 640], ['coffee', 1800, 'steam', 760], ['door', 2350]]],
+  ['street', 'Zone 3: street', [['meeting', 1300, 'flap', 640], ['coffee', 1800, 'steam', 760], ['taxi', 2400]]],
 ];
 
 const zoneRoot = document.getElementById('zones');
