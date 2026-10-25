@@ -286,7 +286,7 @@ const WORKER_X = 4;
 const WORKER_Y = 2;
 const WORKER_STEPS = [
   { front: [12.5, 44.3], back: [24, 44.3], bob: 0.3 },
-  { front: [15.5, 43.1], back: [22, 44.3], bob: -0.8 },
+  { front: [10, 43.1], back: [23, 44.3], bob: -0.8 },
 ];
 const WORKER_HEAD = [17.6, 14.4];
 const WORKER_WOOD = '#c8955a';
@@ -723,7 +723,7 @@ const BIGMAN_QUILT = '#b42a30';
 const BIGMAN_GLOVE = '#5d6374';
 const BIGMAN_STEPS = [
   { front: [17, 71.4], back: [32, 71.4], bob: 0.4, hands: [[9.6, 50.5], [40.6, 49.6]] },
-  { front: [20, 70], back: [30, 71.4], bob: -1, hands: [[11.2, 50], [39.2, 50.4]] },
+  { front: [14, 70], back: [31, 71.4], bob: -1, hands: [[11.2, 50], [39.2, 50.4]] },
 ];
 
 function bigmanLegs(ctx, front, back, bob) {

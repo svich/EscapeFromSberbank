@@ -13,7 +13,7 @@ export const CONFIG = {
 
   // World scroll speed (px/s) at the very start; each level ramps its own
   // speed range (zones[].speed) as its coin goal fills up.
-  speed: { start: px(190) },
+  speed: { start: px(171) },
 
   // Levels, in order. coins: how many to collect to finish the level;
   // speed: scroll speed (px/s) from the level's start to its goal;
@@ -25,8 +25,8 @@ export const CONFIG = {
       title: 'Опенспейс',
       label: 'Офис',
       subtitle: 'Этаж 7. Сдаём квартальные KPI.',
-      coins: 35,
-      speed: [px(190), px(250)],
+      coins: 50,
+      speed: [px(171), px(225)],
       weights: { elder: 5, chair: 3 },
     },
     {
@@ -34,8 +34,8 @@ export const CONFIG = {
       title: 'Хранилище',
       label: 'Хранилище',
       subtitle: 'Служебный этаж. Посторонним вход воспрещён.',
-      coins: 45,
-      speed: [px(205), px(245)],
+      coins: 75,
+      speed: [px(185), px(220)],
       weights: { money: 4, safe: 3, shelf: 4 },
     },
     {
@@ -43,8 +43,8 @@ export const CONFIG = {
       title: 'Улица',
       label: 'Улица',
       subtitle: 'Собери на билет. Никаких стендапов.',
-      coins: 55,
-      speed: [px(200), px(235)],
+      coins: 100,
+      speed: [px(180), px(212)],
       skin: 'heroWinter',
       weights: { worker: 4, snowball: 3, bigman: 3 },
     },
@@ -107,8 +107,7 @@ export const CONFIG = {
     firstDelay: 2.2, // s until the first obstacle reaches the player
     horizon: 4, // s of obstacles planned ahead
     reaction: 0.25, // s of slack always left between two obstacles
-    extraStart: 1.0, // max random extra slack at the start (s) ...
-    extraEnd: 0.3, // ... easing down to this by the last level's goal
+    extra: 0.9, // max random extra slack (s); constant, so coin rows don't thin out
     introBonus: 0.8, // extra slack before an obstacle type's first appearance
     // How long a clear takes, as a share of the airtime: lead = before the
     // obstacle reaches the player, tail = after.
@@ -120,9 +119,9 @@ export const CONFIG = {
 
   pickups: {
     coinScore: 10,
-    lineChance: 0.9, // coin row/arc in a free gap
+    lineChance: 1, // coin row/arc in a free gap
     rowMax: 8, // coins in a row, at most
-    overChance: 0.75, // coin above a jumpable obstacle
+    overChance: 0.9, // coins over a prop (safe, money, shelf), never over enemies
     spacing: 0.13, // s between coins in a row
     chocolateFirstAt: 300, // m
     chocolateEvery: [500, 750], // m, random range between chocolates (extra lives)

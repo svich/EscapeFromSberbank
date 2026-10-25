@@ -5,7 +5,6 @@ const S = CONFIG.spawn;
 const PK = CONFIG.pickups;
 const PPM = CONFIG.pxPerMeter;
 
-const lerp = (a, b, t) => a + (b - a) * t;
 const clamp = (v, lo, hi) => Math.min(hi, Math.max(lo, v));
 const randRange = ([lo, hi]) => lo + Math.random() * (hi - lo);
 
@@ -13,7 +12,7 @@ const randRange = ([lo, hi]) => lo + Math.random() * (hi - lo);
 // early enough (given its own speed and the scroll) to arrive on schedule.
 // Gaps are lead/tail of each clear plus reaction slack, so every pattern is
 // clearable at any speed and fast objects never overtake slow ones.
-// Reads the level and run progress from the scene (zone, progress), and where
+// Reads the level from the scene (zone), and where
 // the run starts (runTime, traveled: a retried level starts mid-run).
 export class Spawner {
   constructor(scene) {
@@ -75,8 +74,7 @@ export class Spawner {
     const base = prev ? prev.arrival + clearTiming(prev.type).tail : now + S.firstDelay;
     const meters = (traveled + Math.max(0, base - now) * speed) / PPM;
     const { type, intro } = this.pickType(this.scene.zone, base);
-    const difficulty = clamp(this.scene.progress, 0, 1);
-    const slack = (prev ? S.reaction : 0) + Math.random() * lerp(S.extraStart, S.extraEnd, difficulty) + (intro ? S.introBonus : 0);
+    const slack = (prev ? S.reaction : 0) + Math.random() * S.extra + (intro ? S.introBonus : 0);
     const arrival = base + clearTiming(type).lead + slack;
 
     this.queue.push({ kind: 'obstacle', type, arrival, intro });
@@ -134,7 +132,7 @@ export class Spawner {
       this.queue.push({ kind: 'coffee', arrival: mid, height: hero.standH + PK.chocolateLift + coffee.h / 2 });
       this.coffeeLeft -= 1;
       this.nextCoffeeAt = mid + randRange(PK.coffeeEvery);
-    } else if (coin && free >= 0.75 && Math.random() < PK.lineChance) {
+    } else if (coin && free >= 0.45 && Math.random() < PK.lineChance) {
       const n = clamp(Math.floor((free - 0.25) / PK.spacing) + 1, 3, PK.rowMax);
       const start = mid - ((n - 1) * PK.spacing) / 2;
       const arc = Math.random() < 0.5;
@@ -144,17 +142,18 @@ export class Spawner {
       }
     }
 
-    if (!coin) return;
-    const kind = CONFIG.obstacles[next.type].kind;
-    const top = metrics.obstacles[next.type].top;
-    if (kind === 'flash') {
-      // Right through him once he's blinded.
-      if (Math.random() < PK.overChance) this.queue.push({ kind: 'coin', arrival: next.arrival, height: groundH });
-    } else if (Math.random() < PK.overChance) {
-      // Reward for clearing it; kept within reach of the jump that clears it.
-      const reach = hero.standH + jump.apex + (kind === 'double' ? jump.extra : 0);
-      const height = Math.min(top + 4 * SCALE + coin.h / 2, reach - coin.h / 2 - 2 * SCALE);
-      this.queue.push({ kind: 'coin', arrival: next.arrival, height });
+    // Coins only over props (they don't move), never over people or things
+    // coming at her: up where the jump that clears it peaks, a small arc over
+    // a jump, one coin at the top of a double jump.
+    const { kind, speed } = CONFIG.obstacles[next.type];
+    if (!coin || speed !== 0 || Math.random() >= PK.overChance) return;
+    const peak = hero.standH + jump.apex + (kind === 'double' ? jump.extra : 0) - coin.h / 2 - 6 * SCALE;
+    if (kind === 'double') {
+      this.queue.push({ kind: 'coin', arrival: next.arrival, height: peak });
+      return;
+    }
+    for (const step of [-1, 0, 1]) {
+      this.queue.push({ kind: 'coin', arrival: next.arrival + step * PK.spacing, height: peak - Math.abs(step) * 12 * SCALE });
     }
   }
 }

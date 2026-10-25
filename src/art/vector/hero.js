@@ -1,7 +1,7 @@
 // Vector chibi hero, drawn with canvas paths. Poses are authored in a 64x80
 // unit frame (soles touch y = 77.8) and rendered at any scale.
 
-import { C, add, capsule, ellipse, outline, renderSheet, shape, strokePts, toPx } from './draw.js';
+import { C, OW, add, capsule, ellipse, outline, renderSheet, shape, strokePts, toPx } from './draw.js';
 
 const FRAME_W = 64;
 const FRAME_H = 80;
@@ -273,40 +273,72 @@ function coat(ctx, y) {
   strokePts(ctx, [[27, y + 42], [42, y + 41.5]], 0.6, WINTER.curl);
 }
 
+// The jeans' hip piece, under the cami's hem: as wide as the two legs.
+const hipsPath = (y) => (c) => {
+  c.moveTo(27, y + 51.7);
+  c.lineTo(41.6, y + 51.7);
+  c.quadraticCurveTo(42.5, y + 55.5, 41.4, y + 58.5);
+  c.lineTo(27.4, y + 58.5);
+  c.quadraticCurveTo(26.3, y + 55.5, 27, y + 51.7);
+};
+
+function hipsDetails(ctx, y) {
+  strokePts(ctx, [[27.3, y + 53.6], [41.4, y + 53.6]], 0.8, C.jeansShade);
+  strokePts(ctx, [[28.2, y + 55.5], [30.2, y + 57.3]], 0.8, C.jeansLight);
+  ellipse(ctx, 35.5, y + 52.7, 0.8, 0.8, '#d9c27a', false);
+}
+
 function torso(ctx, y) {
   if (winter) {
     coat(ctx, y);
     return;
   }
+  torsoTop(ctx, y);
+  shape(ctx, hipsPath(y), C.jeans);
+  hipsDetails(ctx, y);
+}
+
+// Jeans as one piece: every part's outline first, then the fills on top, so
+// no seam shows where the legs meet the hips. The cami goes in between.
+function jeans(ctx, y, hipB, legB, hipF, legF) {
+  const limb = (hip, [knee, foot]) => [hip, add(hip, knee), add(hip, foot)];
+  strokePts(ctx, limb(hipB, legB), 7 + OW * 2, C.outline);
+  strokePts(ctx, limb(hipF, legF), 7 + OW * 2, C.outline);
+  ctx.beginPath();
+  hipsPath(y)(ctx);
+  ctx.closePath();
+  outline(ctx, OW * 2);
+  leg(ctx, hipB, legB, C.jeans, false);
+  leg(ctx, hipF, legF, C.jeansShade, false);
+  torsoTop(ctx, y);
+  shape(ctx, hipsPath(y), C.jeans, false);
+  strokePts(ctx, [[27, y + 51.7], [41.6, y + 51.7]], OW, C.outline);
+  hipsDetails(ctx, y);
+}
+
+// Neck, shoulders and the cami.
+function torsoTop(ctx, y) {
   ctx.fillStyle = C.skinShade;
   ctx.fillRect(32, y + 39.5, 4.5, 5);
   ellipse(ctx, 34.2, y + 45, 8.2, 3.6, C.skin);
   shape(ctx, (c) => {
     c.moveTo(26.6, y + 45.7);
     c.quadraticCurveTo(34.2, y + 44.1, 41.8, y + 45.7);
-    c.quadraticCurveTo(43.6, y + 49.5, 43, y + 53);
-    c.lineTo(25.4, y + 53);
-    c.quadraticCurveTo(24.8, y + 49.5, 26.6, y + 45.7);
+    c.quadraticCurveTo(43.2, y + 49.5, 42, y + 53);
+    c.lineTo(26.6, y + 53);
+    c.quadraticCurveTo(25.4, y + 49.5, 26.6, y + 45.7);
   }, C.cami);
   strokePts(ctx, [[28.4, y + 45.4], [29.4, y + 42.6]], 0.9, C.cami);
   strokePts(ctx, [[40, y + 45.4], [39, y + 42.6]], 0.9, C.cami);
   strokePts(ctx, [[27.8, y + 47.5], [27.6, y + 51.5]], 1.2, C.camiLight);
-  shape(ctx, (c) => {
-    c.moveTo(25, y + 51.7);
-    c.lineTo(43.4, y + 51.7);
-    c.quadraticCurveTo(44.8, y + 55.5, 43.6, y + 58.5);
-    c.lineTo(24.8, y + 58.5);
-    c.quadraticCurveTo(23.6, y + 55.5, 25, y + 51.7);
-  }, C.jeans);
-  strokePts(ctx, [[25.4, y + 53.6], [43.1, y + 53.6]], 0.8, C.jeansShade);
-  strokePts(ctx, [[27, y + 55.5], [29.5, y + 57.5]], 0.8, C.jeansLight);
-  ellipse(ctx, 35.5, y + 52.7, 0.8, 0.8, '#d9c27a', false);
 }
 
-function leg(ctx, hip, [knee, foot], color) {
+// outlined: false leaves the limb's outline to the caller (see jeans).
+function leg(ctx, hip, [knee, foot], color, outlined = true) {
   const k = add(hip, knee);
   const f = add(hip, foot);
-  capsule(ctx, [hip, k, f], 7, color);
+  if (outlined) capsule(ctx, [hip, k, f], 7, color);
+  else strokePts(ctx, [hip, k, f], 7, color);
   if (winter) {
     const boot = color === C.jeans ? WINTER.boot : WINTER.bootShade;
     capsule(ctx, [[f[0], f[1] - 3.5], f], 7.6, boot);
@@ -392,9 +424,13 @@ function drawPose(ctx, p) {
   const headY = 25 + y + (p.headBob ?? 0);
   ponytail(ctx, [21, headY + 8], p.tail ?? [-0.75, 0.66], p.tailPhase ?? 0, p.tailAmp ?? 1);
   arm(ctx, [39, 46 + y], p.armB, C.skinShade);
-  leg(ctx, hipB, p.legB, C.jeansShade);
-  leg(ctx, hipF, p.legF, C.jeans);
-  torso(ctx, y);
+  if (winter) {
+    leg(ctx, hipB, p.legB, C.jeans);
+    leg(ctx, hipF, p.legF, C.jeansShade);
+    torso(ctx, y);
+  } else {
+    jeans(ctx, y, hipB, p.legB, hipF, p.legF);
+  }
   head(ctx, 34, headY, p.face ?? 'open');
   arm(ctx, [30, 46 + y], p.armF, C.skin, true);
   if (p.phone) {
@@ -460,8 +496,8 @@ function drawTrip(ctx) {
 
 // Face down on the floor after the trip, feet kicking up behind.
 function drawProne(ctx, k) {
-  leg(ctx, [36, 65], [[-9, 2], [-13 + k, -9 + k * 3]], C.jeansShade);
-  leg(ctx, [36, 71], [[-9, 1], [-17, 2]], C.jeans);
+  leg(ctx, [36, 65], [[-9, 2], [-13 + k, -9 + k * 3]], C.jeans);
+  leg(ctx, [36, 71], [[-9, 1], [-17, 2]], C.jeansShade);
   tilted(ctx, [36, 67.5], Math.PI / 2, () => torso(ctx, 0));
   arm(ctx, [47, 68], [[-6, 5], [-12, 7]], C.skin, true);
   ponytail(ctx, [53, 62], [-0.9, -0.45 + k * 0.2], k * Math.PI, 1.2);
@@ -499,8 +535,8 @@ function drawSit(ctx, k) {
     head(ctx, 34, 25, 'hurt');
     arm(ctx, [30, 46], [[-6, 6], [-9, 9.5]], C.skin, true);
   });
-  leg(ctx, [hip[0] - 1, hip[1] - 1], [[9, -9], [15, 2]], C.jeansShade);
-  leg(ctx, [hip[0] + 2, hip[1]], [[9, -1], [17, 1]], C.jeans);
+  leg(ctx, [hip[0] - 1, hip[1] - 1], [[9, -9], [15, 2]], C.jeans);
+  leg(ctx, [hip[0] + 2, hip[1]], [[9, -1], [17, 1]], C.jeansShade);
   dizzy(ctx, 39, 21, k * 1.2);
 }
 
