@@ -86,19 +86,6 @@ function label(ctx, str, x, y, size, color, weight = 700) {
   ctx.fillText(str, x, y);
 }
 
-function checkLogo(ctx, x, y, r, ring, mark) {
-  circle(ctx, x, y, r, ring);
-  ctx.beginPath();
-  ctx.moveTo(x - r * 0.45, y + r * 0.02);
-  ctx.lineTo(x - r * 0.1, y + r * 0.35);
-  ctx.lineTo(x + r * 0.5, y - r * 0.32);
-  ctx.lineWidth = r * 0.22;
-  ctx.lineCap = 'round';
-  ctx.lineJoin = 'round';
-  ctx.strokeStyle = mark;
-  ctx.stroke();
-}
-
 function skyline(ctx, rand, x0, x1, base, colors, lit, minH = 14, maxH = 54) {
   let x = x0;
   while (x < x1) {

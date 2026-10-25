@@ -5,7 +5,7 @@
 import { C, OW, capsule, ellipse, outline, renderSheet, roundRect, shape, strokePts, text, toPx } from './draw.js';
 import { buildHero, buildHeroDown } from './hero.js';
 
-export const UNIT = 2.75;
+const UNIT = 2.75;
 // Elders stand a touch shorter than the hero.
 const ELDER_SCALE = 1.65;
 // Workers stand nearly her height and twice as broad.

@@ -269,7 +269,7 @@ function turkeyCard(ctx) {
   ctx.fillRect(0, 64, 100, 6);
 }
 
-export const POSTCARD_SIZE = { w: 1100, h: 770 };
+const POSTCARD_SIZE = { w: 1100, h: 770 };
 
 export function buildTravelArt() {
   const card = (draw) => canvasOf(100, 70, POSTCARD_SIZE.w / 100, draw);

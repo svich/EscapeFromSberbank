@@ -33,15 +33,10 @@ export const C = {
   suitShade: '#363a50',
   suitLight: '#646a86',
   green: '#21a038',
-  greenDark: '#0f7a2e',
-  greenLight: '#7ee08f',
   red: '#e04848',
-  redDark: '#a02c3c',
   gold: '#ffd23f',
   goldDark: '#e0a020',
   coffee: '#8a5a3a',
-  coffeeDark: '#5a3820',
-  glass: '#cfeaff',
 };
 
 export const FONT = 'Nunito, system-ui, sans-serif';

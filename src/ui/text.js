@@ -1,5 +1,5 @@
 export const FONT = 'Nunito, "Trebuchet MS", sans-serif';
-export const INK = '#2b2140';
+const INK = '#2b2140';
 
 // Rounded display text with a dark outline and a soft drop shadow.
 // weight: 400 | 600 | 700 (the loaded Nunito weights; 800 also available).

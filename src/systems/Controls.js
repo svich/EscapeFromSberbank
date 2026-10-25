@@ -1,5 +1,3 @@
-import { CONFIG } from '../config.js';
-
 // Space (or a tap anywhere) jumps, again in the air for the double jump; a
 // left mouse click fires the phone flash (touch screens get a HUD button).
 // Presses are edge-triggered flags read once per frame; "held" reads live

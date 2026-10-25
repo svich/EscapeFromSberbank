@@ -6,7 +6,7 @@ import { midiToFreq, noteToMidi } from './engine.js';
 // k s h o r c (kick, snare, hat, open hat, rim, crash). Tracks shorter than
 // the song loop on their own (a one-bar drum loop under an 8-bar melody).
 
-export const INSTRUMENTS = {
+const INSTRUMENTS = {
   lead: { wave: 'pulse25', vol: 0.1, attack: 0.004, decay: 0.09, sustain: 0.55, release: 0.05, gate: 0.92, vibrato: { rate: 5.5, cents: 14, delay: 0.18 } },
   leadRound: { wave: 'pulse50', vol: 0.08, attack: 0.004, decay: 0.1, sustain: 0.5, release: 0.05, gate: 0.9, vibrato: { rate: 5.5, cents: 12, delay: 0.18 } },
   echo: { wave: 'pulse12', vol: 0.035, attack: 0.004, decay: 0.08, sustain: 0.5, release: 0.05, gate: 0.85 },
