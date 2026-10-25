@@ -30,7 +30,7 @@ export const CONFIG = {
       title: 'Холл',
       label: 'Холл',
       subtitle: 'Не смотри начальству в глаза.',
-      weights: { elder: 2, chair: 3, meeting: 3, manager: 4 },
+      weights: { elder: 2, chair: 3, meeting: 3, shelf: 4 },
     },
     {
       key: 'street',
@@ -38,8 +38,16 @@ export const CONFIG = {
       title: 'Улица',
       label: 'Улица',
       subtitle: 'До свободы 1000 м. Никаких стендапов.',
-      weights: { elder: 2, chair: 2, meeting: 3, manager: 3, logo: 4 },
+      weights: { elder: 2, chair: 2, meeting: 3, logo: 4 },
     },
+  ],
+
+  // Where she flies after finishing each zone (same order), see scenes/Flight.js.
+  // Photos for each come from src/photos/<key>/.
+  countries: [
+    { key: 'serbia', name: 'Сербия', to: 'в Сербию', city: 'Белград' },
+    { key: 'georgia', name: 'Грузия', to: 'в Грузию', city: 'Казбеги' },
+    { key: 'turkey', name: 'Турция', to: 'в Турцию', city: 'Каппадокия' },
   ],
 
   // Parallax factors and the cross-fade between zone backgrounds.
@@ -51,8 +59,8 @@ export const CONFIG = {
     fallGravityMul: 1.35, // heavier on the way down, snappier arcs
     maxFall: px(800),
     // Jump heights in px. null = derived from obstacle hitboxes at boot:
-    // the ground jump clears elder/chair/logo but not the manager, the air
-    // jump adds enough to get over the manager.
+    // the ground jump clears elder/chair/logo but not the shelf, the air
+    // jump adds enough to get over the shelf.
     jumpApex: null,
     doubleJumpHeight: null,
     airJumps: 1,
@@ -71,16 +79,16 @@ export const CONFIG = {
     elder: { unlockAt: 0, speed: px(18), kind: 'jump', hint: 'Прыгай!' },
     chair: { unlockAt: 250, speed: px(85), kind: 'jump', hint: 'Прыгай!' },
     meeting: { unlockAt: 550, speed: px(45), kind: 'slide', wobbleHz: 1.4, hint: 'Подкат!' },
-    manager: { unlockAt: 1000, speed: px(30), kind: 'double', hint: 'Двойной прыжок!' },
+    shelf: { unlockAt: 1000, speed: 0, kind: 'double', hint: 'Двойной прыжок!' },
     logo: { unlockAt: 2000, speed: px(115), kind: 'jump', hint: 'Прыгай!' },
   },
 
   // Margins used when deriving jump heights from hitboxes (px).
   jumpMargins: {
     overLow: px(30), // ground jump apex above the tallest low obstacle
-    underTall: px(4), // ...but this far below the manager's top
+    underTall: px(4), // ...but this far below the shelf's top
     minClear: px(6), // never less than this over low obstacles
-    overTall: px(12), // air jump clears the manager by this, from half apex
+    overTall: px(12), // air jump clears the shelf by this, from half apex
     minAir: px(30), // smallest air jump
   },
 
@@ -108,10 +116,10 @@ export const CONFIG = {
     overChance: 0.45, // coffee above a jumpable obstacle
     underChance: 0.6, // coffee under a meeting
     spacing: 0.13, // s between coffees in a row
-    offerFirstAt: 300, // m
-    offerEvery: [500, 750], // m, random range between job offers
-    offerBonusCoffees: 5, // when grabbed while already shielded
-    offerLift: px(5), // job offer floats this far above the standing head
+    chocolateFirstAt: 300, // m
+    chocolateEvery: [500, 750], // m, random range between chocolates (extra lives)
+    chocolateBonusCoffees: 5, // when grabbed while already holding one
+    chocolateLift: px(5), // chocolate floats this far above the standing head
   },
 
   exit: { offset: px(110) }, // door stops this far past the player at the finish

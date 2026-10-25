@@ -30,6 +30,11 @@ export class Backdrop {
     this.zone = zone;
     const next = this.layers(this.sets[zone]);
     this.scene.tweens.killTweensOf(next);
+    if (fadeMs <= 0) {
+      next.forEach((l) => l.setVisible(true).setAlpha(1));
+      this.layers(prev).forEach((l) => l.setVisible(false));
+      return;
+    }
     next.forEach((l) => l.setVisible(true).setAlpha(0));
     this.scene.tweens.add({
       targets: next,

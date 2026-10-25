@@ -56,12 +56,12 @@ const pickupRow = document.getElementById('pickups');
 const objects = [
   [obstacleRow, 'elder', 'grannies & grandpa', 'walk0'],
   [obstacleRow, 'chair', 'office chair'],
-  [obstacleRow, 'manager', 'manager', 'walk'],
+  [obstacleRow, 'shelf', 'bookcase'],
   [obstacleRow, 'logo', 'logo ball'],
   [obstacleRow, 'meeting', 'meeting invite', 'flap'],
   [obstacleRow, 'door', 'exit door'],
   [pickupRow, 'coffee', 'coffee: points', 'steam'],
-  [pickupRow, 'offer', 'job offer: shield'],
+  [pickupRow, 'chocolate', 'chocolate: extra life'],
 ];
 for (const [row, key, label, anim] of objects) {
   const s = sprites[key];
@@ -86,7 +86,7 @@ function tile(ctx, img, offset, y) {
 
 const ZONES = [
   ['office', 'Zone 1: open space', [['elder', 1200, 'walk0'], ['coffee', 1650, 'steam', 700], ['chair', 2200]]],
-  ['lobby', 'Zone 2: lobby', [['manager', 1250, 'walk'], ['offer', 1750, null, 700], ['logo', 2300]]],
+  ['lobby', 'Zone 2: lobby', [['shelf', 1250], ['chocolate', 1750, null, 700], ['logo', 2300]]],
   ['street', 'Zone 3: street', [['meeting', 1300, 'flap', 640], ['coffee', 1800, 'steam', 760], ['door', 2350]]],
 ];
 

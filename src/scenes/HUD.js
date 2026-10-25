@@ -31,7 +31,7 @@ export class HUDScene extends Phaser.Scene {
     this.drawProgressBar();
     this.marker = this.add.image(BAR.x, BAR.y + 8, 'hud-marker').setOrigin(0.5, 1);
 
-    this.shieldIcon = fitHeight(this.add.image(W - 250, 60, 'offer', 0), 64).setVisible(false);
+    this.shieldIcon = fitHeight(this.add.image(W - 250, 60, 'chocolate', 0), 64).setVisible(false);
     this.shieldScale = this.shieldIcon.scale;
     addMuteButton(this, W - 150, 60);
     const pause = this.add.image(W - 60, 60, 'icon-pause');

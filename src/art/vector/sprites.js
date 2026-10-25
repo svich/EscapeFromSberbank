@@ -6,9 +6,11 @@ import { C, OW, capsule, ellipse, renderSheet, roundRect, shape, strokePts, text
 import { buildHero } from './hero.js';
 
 export const UNIT = 2.75;
-// Elders stand a touch shorter than the hero; the manager towers over both.
+// Elders stand a touch shorter than the hero.
 const ELDER_SCALE = 1.65;
-const MANAGER_SCALE = 1.35;
+// Fairy wings drawn larger than the hero's art scale so they stand out.
+const WING_SCALE = 1.4;
+
 
 // --- Obstacles ---------------------------------------------------------------
 
@@ -278,104 +280,72 @@ function chair(ctx) {
   capsule(ctx, [[21.5, 21], [21.5, 16.5], [17, 16.5]], 1.6, C.suitShade);
 }
 
-// Chibi effective manager walking toward the player (facing left) with a red
-// KPI folder. Leg joints are [knee, foot] relative to the hip; forward is -x.
-const MANAGER_WALK = [
-  { front: [[-4, 9], [-7, 18]], back: [[3, 9], [6, 18]], bob: 0 },
-  { front: [[-1, 9], [0, 18]], back: [[1, 8], [3, 15]], bob: -1 },
-  { front: [[3, 9], [6, 18]], back: [[-4, 9], [-7, 18]], bob: 0 },
-  { front: [[1, 8], [3, 15]], back: [[-1, 9], [0, 18]], bob: -1 },
-];
+// Tall office bookcase full of binders and archive boxes: needs a double jump.
+function shelf(ctx) {
+  const wood = '#9a6a44';
+  const back = '#6b4a30';
+  for (const x of [5, 39]) roundRect(ctx, x, 108, 4, 5, 1, back);
+  roundRect(ctx, 2, 2, 44, 107, 2.5, wood);
+  ctx.fillStyle = back;
+  ctx.fillRect(5, 5, 38, 101);
+  const shelfY = [5, 27, 49, 71, 93];
+  for (const y of shelfY.slice(1)) roundRect(ctx, 3.5, y - 1.6, 41, 3.2, 1, wood, false);
 
-function managerLeg(ctx, hip, [knee, foot], color) {
-  const k = [hip[0] + knee[0], hip[1] + knee[1]];
-  const f = [hip[0] + foot[0], hip[1] + foot[1]];
-  capsule(ctx, [hip, k, f], 8.5, color);
-  ellipse(ctx, f[0] - 2, f[1] + 1.6, 4.4, 2.3, C.lash);
+  // Shelf 1: binders, one with the KPI label.
+  const binder = (x, y, w, h, color, tilt = 0) => {
+    ctx.save();
+    ctx.translate(x + w / 2, y + h);
+    ctx.rotate(tilt);
+    roundRect(ctx, -w / 2, -h, w, h, 0.8, color);
+    roundRect(ctx, -w / 2 + 0.9, -h * 0.7, w - 1.8, h * 0.22, 0.4, C.paper, false);
+    ellipse(ctx, 0, -h * 0.25, 0.8, 0.8, C.paper, false);
+    ctx.restore();
+  };
+  ['#e04848', '#3d7bd9', '#21a038', '#ffd23f', '#8e3a6e', '#3d7bd9'].forEach((color, i) => binder(6.5 + i * 5.6, 8, 4.6, 17, color));
+  text(ctx, 'KPI', 9.3, 17.6, 2.2, C.lash);
+
+  // Shelf 2: archive boxes.
+  const box = (x, y, w, h, label) => {
+    roundRect(ctx, x, y, w, h, 0.8, '#d8b07a');
+    roundRect(ctx, x + w / 2 - 3, y + 2, 6, 3, 0.6, '#b98f5a', false);
+    text(ctx, label, x + w / 2, y + h * 0.66, 2.6, '#5a3820', 800);
+  };
+  box(6, 34, 17, 13, 'АРХИВ');
+  box(24.5, 34, 17, 13, 'АРХИВ');
+
+  // Shelf 3: leaning binders and an employee-of-the-month cup.
+  binder(7, 33 + 22, 4.6, 15, '#e04848', -0.25);
+  binder(13, 32 + 22, 4.6, 16, '#21a038', -0.25);
+  ellipse(ctx, 32, 65.5, 4.6, 1.2, C.goldDark);
+  roundRect(ctx, 30.6, 61, 2.8, 4.4, 0.4, C.goldDark, false);
+  shape(ctx, (c) => {
+    c.moveTo(27, 53);
+    c.lineTo(37, 53);
+    c.quadraticCurveTo(36.5, 61, 32, 61.5);
+    c.quadraticCurveTo(27.5, 61, 27, 53);
+  }, C.gold);
+  star(ctx, 32, 56.6, 2, C.white);
+
+  // Shelf 4: stacked paper and a box.
+  for (let i = 0; i < 4; i++) roundRect(ctx, 7, 86 - i * 3.2, 15, 3, 0.6, i % 2 ? C.paperShade : C.paper);
+  box(25, 77, 16, 13, 'ДЕЛА');
+
+  // Shelf 5: a plant and more binders.
+  roundRect(ctx, 9, 100, 8, 6, [0, 0, 2, 2], '#c45c3a');
+  for (const [x, y, r] of [[13, 96, 4], [10, 98.5, 3], [16, 98.5, 3]]) ellipse(ctx, x, y, r, r, '#3f9a52');
+  ['#ffd23f', '#3d7bd9', '#e04848', '#21a038'].forEach((color, i) => binder(22 + i * 5.2, 92, 4.4, 14, color));
 }
 
-function manager({ front, back, bob }) {
-  return (ctx) => {
-    const y = bob;
-    managerLeg(ctx, [32, 66 + y], back, C.suitShade);
-    managerLeg(ctx, [24, 66 + y], front, C.suit);
-
-    // Jacket, shirt, tie, belt.
-    shape(ctx, (c) => {
-      c.moveTo(14, 45 + y);
-      c.quadraticCurveTo(28, 37 + y, 42, 45 + y);
-      c.lineTo(43, 67 + y);
-      c.quadraticCurveTo(28, 70 + y, 13, 67 + y);
-    }, C.suit);
-    shape(ctx, (c) => {
-      c.moveTo(22.5, 41 + y);
-      c.lineTo(33.5, 41 + y);
-      c.lineTo(28, 54 + y);
-    }, C.white);
-    shape(ctx, (c) => {
-      c.moveTo(28, 43 + y);
-      c.lineTo(30, 46 + y);
-      c.lineTo(29.2, 57 + y);
-      c.lineTo(28, 59 + y);
-      c.lineTo(26.8, 57 + y);
-      c.lineTo(26, 46 + y);
-    }, C.green);
-    strokePts(ctx, [[22, 43 + y], [26, 53 + y]], 0.9, C.suitShade);
-    strokePts(ctx, [[34, 43 + y], [30, 53 + y]], 0.9, C.suitShade);
-    strokePts(ctx, [[14.2, 63.5 + y], [42.6, 63.5 + y]], 1.5, C.lash);
-    roundRect(ctx, 26.5, 62.3 + y, 3, 2.4, 0.6, C.gold, false);
-
-    // Big bald head with grey sides, glasses and a frown.
-    const hx = 28;
-    const hy = 22 + y;
-    const r = 17.5;
-    ellipse(ctx, hx, hy, r, r, C.skin);
-    ctx.save();
-    ctx.beginPath();
-    ctx.arc(hx, hy, r, 0, Math.PI * 2);
-    ctx.clip();
-    ellipse(ctx, hx + 13, hy + 3, 7, 10, C.gray, false);
-    ctx.restore();
-    ctx.beginPath();
-    ctx.arc(hx, hy, r, 0, Math.PI * 2);
-    ctx.lineWidth = OW;
-    ctx.strokeStyle = C.outline;
-    ctx.stroke();
-    ellipse(ctx, hx + 15.5, hy + 4, 2.6, 3.6, C.skin);
-    ctx.save();
-    ctx.translate(hx - 7, hy - 11);
-    ctx.rotate(-0.45);
-    ellipse(ctx, 0, 0, 5, 2.4, 'rgba(255,255,255,0.75)', false);
-    ctx.restore();
-    ellipse(ctx, hx - 16.5, hy + 7.5, 2.4, 2.2, C.skin);
-    strokePts(ctx, [[hx - 15, hy - 3.5], [hx - 8, hy - 1.5]], 1.6, C.suitShade);
-    strokePts(ctx, [[hx - 3, hy - 1.5], [hx + 4, hy - 3.5]], 1.6, C.suitShade);
-    strokePts(ctx, [[hx + 4.5, hy + 2.6], [hx + 13, hy + 2.2]], 1.2, C.lash);
-    for (const gx of [hx - 11, hx]) {
-      ellipse(ctx, gx, hy + 3, 4.6, 4.2, 'rgba(207,234,255,0.9)', false);
-      ctx.beginPath();
-      ctx.ellipse(gx, hy + 3, 4.6, 4.2, 0, 0, Math.PI * 2);
-      ctx.lineWidth = 1.4;
-      ctx.strokeStyle = C.lash;
-      ctx.stroke();
-      ellipse(ctx, gx + 0.4, hy + 3.4, 1.1, 1.1, C.lash, false);
-    }
-    strokePts(ctx, [[hx - 6.4, hy + 2.6], [hx - 4.6, hy + 2.6]], 1.2, C.lash);
-    ctx.beginPath();
-    ctx.moveTo(hx - 11, hy + 12.5);
-    ctx.quadraticCurveTo(hx - 7, hy + 10.6, hx - 3, hy + 12.5);
-    ctx.lineWidth = 1.2;
-    ctx.strokeStyle = C.lash;
-    ctx.lineCap = 'round';
-    ctx.stroke();
-
-    // Arm holding the KPI folder in front.
-    roundRect(ctx, 1.5, 50 + y, 14, 17, 1.6, C.red);
-    roundRect(ctx, 3, 48.5 + y, 10, 3, 0.6, C.paper);
-    text(ctx, 'KPI', 8.5, 58.5 + y, 4.2, C.white);
-    capsule(ctx, [[18, 46 + y], [13, 52 + y], [12.5, 57.5 + y]], 5.5, C.suit);
-    ellipse(ctx, 12.5, 58.5 + y, 2.6, 2.6, C.skin);
-  };
+function star(ctx, cx, cy, r, color) {
+  ctx.beginPath();
+  for (let i = 0; i < 10; i++) {
+    const rr = i % 2 ? r * 0.45 : r;
+    const a = -Math.PI / 2 + (i * Math.PI) / 5;
+    ctx.lineTo(cx + Math.cos(a) * rr, cy + Math.sin(a) * rr);
+  }
+  ctx.closePath();
+  ctx.fillStyle = color;
+  ctx.fill();
 }
 
 function logo(ctx) {
@@ -484,37 +454,107 @@ function sparkle(ctx, x, y, r) {
   }, C.white, false);
 }
 
-function offer(ctx) {
-  const glow = ctx.createRadialGradient(14, 17, 0, 14, 17, 15);
-  glow.addColorStop(0, 'rgba(255,230,120,0.55)');
-  glow.addColorStop(1, 'rgba(255,230,120,0)');
-  ctx.fillStyle = glow;
-  ctx.fillRect(0, 0, 28, 34);
-  shape(ctx, (c) => {
-    c.moveTo(4, 3);
-    c.lineTo(19, 3);
-    c.lineTo(24, 8);
-    c.lineTo(24, 31);
-    c.lineTo(4, 31);
-  }, C.paper);
-  shape(ctx, (c) => {
-    c.moveTo(19, 3);
-    c.lineTo(19, 8);
-    c.lineTo(24, 8);
-  }, C.paperShade);
-  text(ctx, 'ОФФЕР', 12, 8.2, 3.8, C.green);
-  for (const [y, x1] of [[12.5, 21], [15.5, 19], [18.5, 20]]) strokePts(ctx, [[7, y], [x1, y]], 0.9, C.line);
-  for (const dx of [-1.6, 1.6]) {
-    shape(ctx, (c) => {
-      c.moveTo(18 + dx - 1.4, 26);
-      c.lineTo(18 + dx + 1.4, 26);
-      c.lineTo(18 + dx * 1.8, 31);
-    }, C.red);
+// Fairy wings shown on the double jump. The pivot sits at her back (right
+// side of the frame) and every wing sweeps backward from it, so they read as
+// growing from her back rather than from behind her big head.
+export const WING_PIVOT = { x: 52, y: 30 };
+
+function fairyWingPath(ctx, [px, py], [tx, ty], width) {
+  const dx = tx - px;
+  const dy = ty - py;
+  const len = Math.hypot(dx, dy);
+  const nx = (-dy / len) * width;
+  const ny = (dx / len) * width;
+  ctx.beginPath();
+  ctx.moveTo(px, py);
+  ctx.bezierCurveTo(px + dx * 0.3 + nx, py + dy * 0.3 + ny, tx + nx * 0.9 - dx * 0.08, ty + ny * 0.9 - dy * 0.08, tx, ty);
+  ctx.bezierCurveTo(tx - nx * 0.6 - dx * 0.12, ty - ny * 0.6 - dy * 0.12, px + dx * 0.35 - nx * 0.7, py + dy * 0.35 - ny * 0.7, px, py);
+  ctx.closePath();
+}
+
+function fairyWing(ctx, tip, width, alpha) {
+  const p = [WING_PIVOT.x, WING_PIVOT.y];
+  fairyWingPath(ctx, p, tip, width);
+  const g = ctx.createLinearGradient(p[0], p[1], tip[0], tip[1]);
+  g.addColorStop(0, `rgba(255,170,215,${alpha})`);
+  g.addColorStop(0.5, `rgba(200,170,255,${alpha * 0.9})`);
+  g.addColorStop(1, `rgba(150,230,255,${alpha * 0.8})`);
+  ctx.fillStyle = g;
+  ctx.fill();
+  ctx.lineWidth = 1.2;
+  ctx.strokeStyle = 'rgba(140,80,205,0.95)';
+  ctx.stroke();
+  // Veins and a few glints.
+  for (const k of [0.55, 0.8]) {
+    strokePts(ctx, [p, [p[0] + (tip[0] - p[0]) * k + (tip[1] - p[1]) * 0.12, p[1] + (tip[1] - p[1]) * k - (tip[0] - p[0]) * 0.12]], 0.5, 'rgba(255,255,255,0.7)');
   }
-  ellipse(ctx, 18, 24.5, 3.8, 3.8, C.gold);
-  ellipse(ctx, 18, 24.5, 2.3, 2.3, C.goldDark, false);
-  sparkle(ctx, 25, 3.5, 2.4);
-  sparkle(ctx, 3, 27, 1.6);
+  ellipse(ctx, p[0] + (tip[0] - p[0]) * 0.6, p[1] + (tip[1] - p[1]) * 0.6, 1.1, 1.1, 'rgba(255,255,255,0.9)', false);
+}
+
+// Tip offsets from the pivot, all pointing back: near/far upper, near/far lower.
+// Kept fairly flat so the upper wings stay below her head until well behind it.
+const FAIRY_TIPS = [
+  { tip: [-30, -13], width: 7, alpha: 0.6, flap: 1 },
+  { tip: [-22, 14], width: 5.5, alpha: 0.55, flap: 0.6 },
+  { tip: [-34, -7], width: 10, alpha: 0.92, flap: 1 },
+  { tip: [-25, 11], width: 7.5, alpha: 0.88, flap: 0.6 },
+];
+
+// up: -1..1, how far the wings are raised in this flap frame (a rotation
+// about the pivot; clockwise lifts a backward-pointing wing).
+function fairyWings(up) {
+  return (ctx) => {
+    const glow = ctx.createRadialGradient(WING_PIVOT.x - 16, WING_PIVOT.y, 0, WING_PIVOT.x - 16, WING_PIVOT.y, 28);
+    glow.addColorStop(0, 'rgba(255,225,250,0.5)');
+    glow.addColorStop(1, 'rgba(255,225,250,0)');
+    ctx.fillStyle = glow;
+    ctx.fillRect(0, 0, 60, 60);
+    for (const { tip: [dx, dy], width, alpha, flap } of FAIRY_TIPS) {
+      const a = up * 0.25 * flap;
+      const tx = WING_PIVOT.x + dx * Math.cos(a) - dy * Math.sin(a);
+      const ty = WING_PIVOT.y + dx * Math.sin(a) + dy * Math.cos(a);
+      fairyWing(ctx, [tx, ty], width, alpha);
+    }
+  };
+}
+
+// Chocolate bar, half unwrapped: an extra life.
+function chocolate(ctx) {
+  const glow = ctx.createRadialGradient(15, 18, 0, 15, 18, 16);
+  glow.addColorStop(0, 'rgba(255,220,140,0.6)');
+  glow.addColorStop(1, 'rgba(255,220,140,0)');
+  ctx.fillStyle = glow;
+  ctx.fillRect(0, 0, 30, 36);
+  ctx.save();
+  ctx.translate(15, 18.5);
+  ctx.rotate(-0.22);
+  // Exposed squares on top, gold foil, then the purple wrapper.
+  roundRect(ctx, -8, -15, 16, 12, 1.4, '#6b3e26');
+  for (const x of [-2.7, 2.7]) strokePts(ctx, [[x, -14.4], [x, -3.4]], 0.6, '#4a2a18');
+  strokePts(ctx, [[-7.4, -9], [7.4, -9]], 0.6, '#4a2a18');
+  for (const [x, y] of [[-5.3, -12], [0, -12], [5.3, -12], [-5.3, -6], [0, -6], [5.3, -6]]) ellipse(ctx, x - 0.8, y - 0.8, 0.9, 0.5, 'rgba(255,255,255,0.25)', false);
+  shape(ctx, (c) => {
+    c.moveTo(-9, -5);
+    c.lineTo(-6, -7.5);
+    c.lineTo(-3, -5.2);
+    c.lineTo(0, -7.8);
+    c.lineTo(3, -5.2);
+    c.lineTo(6, -7.5);
+    c.lineTo(9, -5);
+    c.lineTo(9, -2);
+    c.lineTo(-9, -2);
+  }, '#e8c34a');
+  roundRect(ctx, -9, -3, 18, 18, 1.8, '#6a3fa0');
+  strokePts(ctx, [[-9, 0.5], [9, 0.5]], 1, '#8e63c4');
+  text(ctx, 'ШОКО', 0, 6.4, 4, C.white, 800);
+  shape(ctx, (c) => {
+    c.moveTo(0, 12.4);
+    c.bezierCurveTo(-3, 10.4, -2.2, 8.4, 0, 9.8);
+    c.bezierCurveTo(2.2, 8.4, 3, 10.4, 0, 12.4);
+  }, '#f27fb5', false);
+  ctx.restore();
+  sparkle(ctx, 26, 4, 2.4);
+  sparkle(ctx, 4, 30, 1.6);
 }
 
 // Exit: green EXIT sign over an open door full of daylight.
@@ -568,11 +608,7 @@ export function buildSprites() {
       body: toPx(UNIT * ELDER_SCALE)({ x: 5, y: 4, w: 24, h: 35 }),
     },
     chair: { ...sheet([chair], 28, 42), body: px({ x: 3, y: 2, w: 22, h: 39 }) },
-    manager: {
-      ...sheet(MANAGER_WALK.map(manager), 56, 89, MANAGER_SCALE),
-      anims: { walk: { frames: [0, 1, 2, 3], fps: 6 } },
-      body: toPx(UNIT * MANAGER_SCALE)({ x: 11, y: 5, w: 33, h: 83 }),
-    },
+    shelf: { ...sheet([shelf], 48, 114), body: px({ x: 3, y: 1, w: 42, h: 112 }) },
     logo: { ...sheet([logo], 40, 40), body: px({ x: 2, y: 2, w: 36, h: 36 }), circle: px({ x: 20, y: 20, r: 18 }) },
     meeting: {
       ...sheet([meeting(0.55, 0), meeting(0, 0.6), meeting(-0.55, 1.2)], 56, 36),
@@ -584,7 +620,12 @@ export function buildSprites() {
       anims: { steam: { frames: [0, 1], fps: 3 } },
       body: px({ x: 3, y: 8, w: 18, h: 23 }),
     },
-    offer: { ...sheet([offer], 28, 34), body: px({ x: 4, y: 3, w: 20, h: 28 }) },
+    chocolate: { ...sheet([chocolate], 30, 36), body: px({ x: 4, y: 3, w: 22, h: 30 }) },
+    wings: {
+      ...sheet([fairyWings(1), fairyWings(0), fairyWings(-1), fairyWings(0)], 60, 60, WING_SCALE),
+      anims: { flap: { frames: [0, 1, 2, 3], fps: 14 } },
+      pivot: toPx(UNIT * WING_SCALE)(WING_PIVOT),
+    },
     door: { ...sheet([door], 70, 124), body: px({ x: 10, y: 26, w: 50, h: 96 }) },
   };
 }

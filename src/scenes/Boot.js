@@ -1,7 +1,9 @@
 import * as Phaser from 'phaser';
 import { buildBackgrounds } from '../art/vector/backgrounds.js';
+import { buildTravelArt } from '../art/vector/travel.js';
 import { buildSprites } from '../art/vector/sprites.js';
 import { audio } from '../audio/index.js';
+import { loadPhotos } from '../photos.js';
 import { CONFIG } from '../config.js';
 import { storage } from '../storage.js';
 import { computeMetrics, metrics } from '../systems/metrics.js';
@@ -28,6 +30,17 @@ export class BootScene extends Phaser.Scene {
     }
 
     makeFxTextures(this, metrics);
+
+    const travel = buildTravelArt();
+    this.registerCanvas('plane', travel.plane);
+    this.registerCanvas('cloud', travel.cloud);
+    this.registerCanvas('flight-sky', travel.sky);
+    for (const { key } of CONFIG.countries) {
+      this.registerCanvas(`flag-${key}`, travel.flags[key]);
+      this.registerCanvas(`postcard-${key}`, travel.postcards[key]);
+    }
+    // Photos are only needed after the first level; load them in the background.
+    loadPhotos(this.textures, CONFIG.countries.map((c) => c.key));
 
     this.registry.set('best', storage.getNumber(CONFIG.storage.best, 0));
     this.registry.set('bestScore', storage.getNumber(CONFIG.storage.bestScore, 0));

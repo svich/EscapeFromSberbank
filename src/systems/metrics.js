@@ -86,11 +86,11 @@ function deriveJump() {
   const o = metrics.obstacles;
   const lows = ['elder', 'chair', 'logo'].filter((t) => o[t]).map((t) => o[t].top);
   const low = lows.length ? Math.max(...lows) : M.minAir;
-  const tall = o.manager ? o.manager.top : low + 2 * M.overLow;
+  const tall = o.shelf ? o.shelf.top : low + 2 * M.overLow;
 
   let apex = P.jumpApex ?? Math.min(low + M.overLow, tall - M.underTall);
   if (apex < low + M.minClear) {
-    console.warn(`[tuning] jump apex ${apex}px barely clears ${low}px obstacles; the manager (${tall}px) is too short to need a double jump.`);
+    console.warn(`[tuning] jump apex ${apex}px barely clears ${low}px obstacles; the shelf (${tall}px) is too short to need a double jump.`);
     if (P.jumpApex == null) apex = low + M.minClear;
   }
   const extra = P.doubleJumpHeight ?? Math.max(M.minAir, tall + M.overTall - apex * 0.5);
@@ -109,7 +109,7 @@ export function computeMetrics(sprites) {
   for (const type of Object.keys(CONFIG.obstacles)) {
     if (sprites[type]) metrics.obstacles[type] = obstacleMetrics(type, sprites[type], metrics.hero);
   }
-  for (const kind of ['coffee', 'offer']) {
+  for (const kind of ['coffee', 'chocolate']) {
     if (sprites[kind]) metrics.pickups[kind] = pickupMetrics(sprites[kind]);
   }
   for (const [key, def] of Object.entries(sprites)) {
@@ -122,7 +122,7 @@ export function computeMetrics(sprites) {
     const j = metrics.jump;
     console.info(
       `[tuning] jump apex ${j.apex.toFixed(0)}px (+${j.extra.toFixed(0)}px air jump), ` +
-        `tallest low obstacle ${j.low}px, manager ${j.tall}px, airtime ${j.single.toFixed(2)}s / ${j.double.toFixed(2)}s`,
+        `tallest low obstacle ${j.low}px, shelf ${j.tall}px, airtime ${j.single.toFixed(2)}s / ${j.double.toFixed(2)}s`,
     );
   }
   return metrics;

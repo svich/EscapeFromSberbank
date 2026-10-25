@@ -5,6 +5,7 @@ import { Player } from '../objects/Player.js';
 import { storage } from '../storage.js';
 import { Backdrop } from '../systems/Backdrop.js';
 import { Controls } from '../systems/Controls.js';
+import { Fairy } from '../systems/Fairy.js';
 import { Fx } from '../systems/Fx.js';
 import { metrics, pickupY } from '../systems/metrics.js';
 import { Spawner, zoneAt } from '../systems/Spawner.js';
@@ -58,6 +59,7 @@ export class GameScene extends Phaser.Scene {
     this.player = new Player(this, CONFIG.player.x).setDepth(20);
     this.shieldFx = this.add.image(0, 0, 'shield-bubble').setDepth(21).setVisible(false);
     this.fx = new Fx(this);
+    this.fairy = new Fairy(this, this.player);
     this.spawner = new Spawner(this);
     this.controls = new Controls(this, {
       onPause: () => this.pauseGame(),
@@ -68,10 +70,15 @@ export class GameScene extends Phaser.Scene {
     this.physics.add.overlap(this.player, this.pickups, this.collect, undefined, this);
 
     this.player.on('player-jump', (air) => {
+      if (air) {
+        this.fairy.spread();
+        audio.sfx('fairy');
+      }
       audio.sfx(air ? 'doubleJump' : 'jump');
       this.fx.puffAt(this.player.x, this.player.body.bottom, air ? 10 : 6);
     });
     this.player.on('player-land', () => {
+      this.fairy.fold();
       audio.sfx('land');
       this.fx.puffAt(this.player.x, G, 4);
     });
@@ -133,6 +140,7 @@ export class GameScene extends Phaser.Scene {
 
     this.player.tick(dt, this.controls.read());
     this.updatePlayerFx(dt);
+    this.fairy.update();
     this.publishState();
 
     if (this.mode === 'run' && this.traveled >= this.finishPx) this.reachExit();
@@ -140,13 +148,48 @@ export class GameScene extends Phaser.Scene {
 
   // --- world ---------------------------------------------------------------
 
+  // Finishing a zone flies her to the next country (Flight scene), then the
+  // run picks up in the next zone with a clear course.
   updateZone() {
     const zone = zoneAt(this.traveled / PPM);
     if (zone === this.zone) return;
-    this.zone = zone;
-    this.backdrop.setZone(zone);
-    audio.playMusic(songForZone(zone), { atBar: true });
+    this.startFlight(this.zone, zone);
+  }
+
+  startFlight(country, nextZone) {
+    this.mode = 'flight';
+    this.fairy.fold();
+    this.nextZone = nextZone;
+    this.controls.enabled = false;
+    this.controls.reset();
     audio.sfx('zone');
+    const cam = this.cameras.main;
+    cam.once(Phaser.Cameras.Scene2D.Events.FADE_OUT_COMPLETE, () => {
+      this.clearCourse();
+      this.scene.pause();
+      this.scene.pause('HUD');
+      this.scene.launch('Flight', { country, next: 'resume' });
+    });
+    cam.fadeOut(CONFIG.fadeMs);
+  }
+
+  // Called by the Flight scene when its photos are done.
+  endFlight() {
+    this.zone = this.nextZone;
+    this.backdrop.setZone(this.zone, 0);
+    this.spawner.restart();
+    this.mode = 'run';
+    this.controls.enabled = true;
+    this.controls.reset();
+    this.scene.resume();
+    this.scene.resume('HUD');
+    fadeIn(this);
+    audio.playMusic(songForZone(this.zone));
+  }
+
+  clearCourse() {
+    for (const o of this.obstacles.getChildren().slice()) this.removeObstacle(o);
+    for (const p of this.pickups.getChildren().slice()) p.destroy();
   }
 
   spawnObstacle(type, x, intro) {
@@ -183,7 +226,7 @@ export class GameScene extends Phaser.Scene {
   }
 
   spawnPickup(kind, x, height) {
-    const type = kind === 'offer' && this.shield ? 'coffee' : kind;
+    const type = kind === 'chocolate' && this.shield ? 'coffee' : kind;
     const m = metrics.pickups[type];
     if (!m) return null;
     const y = pickupY(type, height);
@@ -195,11 +238,11 @@ export class GameScene extends Phaser.Scene {
     p.body.setSize(m.hitbox.w, m.hitbox.h, false);
     p.body.setOffset(m.hitbox.x, m.hitbox.y);
     if (metrics.anims[type]) p.play(metrics.anims[type]);
-    if (type === 'offer') {
-      // Soft pulsing halo so the job offer reads as special.
+    if (type === 'chocolate') {
+      // Soft pulsing halo so the chocolate reads as special.
       p.glow = this.add
         .image(x, y, 'fx-dot')
-        .setTint(0x7fe3ff)
+        .setTint(0xffc96b)
         .setScale((Math.max(m.frameW, m.frameH) * 2) / 24)
         .setDepth(10);
       p.once('destroy', () => p.glow.destroy());
@@ -266,7 +309,7 @@ export class GameScene extends Phaser.Scene {
     this.cameras.main.shake(140, 0.006);
     const c = this.player.body.center;
     this.fx.sparkle(c.x, c.y, true, 16);
-    this.fx.popText(this.player.x, this.player.body.top - px(4), 'Щит сработал!', '#7fe3ff');
+    this.fx.popText(this.player.x, this.player.body.top - px(4), 'Шоколадка спасла!', '#7fe3ff');
   }
 
   knockAway(o) {
@@ -296,15 +339,15 @@ export class GameScene extends Phaser.Scene {
       this.fx.sparkle(x, y, false, 8);
       this.fx.popText(x, y - px(8), '+1');
     } else if (this.shield) {
-      this.coffees += CONFIG.pickups.offerBonusCoffees;
+      this.coffees += CONFIG.pickups.chocolateBonusCoffees;
       audio.sfx('shieldGet');
       this.fx.sparkle(x, y, true, 12);
-      this.fx.popText(x, y - px(8), `+${CONFIG.pickups.offerBonusCoffees} кофе`);
+      this.fx.popText(x, y - px(8), `+${CONFIG.pickups.chocolateBonusCoffees} кофе`);
     } else {
       this.shield = true;
       audio.sfx('shieldGet');
       this.fx.sparkle(x, y, true, 14);
-      this.fx.popText(x, y - px(8), 'Оффер!', '#7fe3ff');
+      this.fx.popText(x, y - px(8), 'Шоколадка!', '#7fe3ff');
     }
   }
 
@@ -370,6 +413,7 @@ export class GameScene extends Phaser.Scene {
 
   die() {
     this.mode = 'dying';
+    this.fairy.fold();
     this.deathMeters = Math.floor(this.traveled / PPM);
     this.controls.enabled = false;
     this.player.die();
@@ -385,6 +429,7 @@ export class GameScene extends Phaser.Scene {
 
   reachExit() {
     this.mode = 'exit';
+    this.fairy.fold();
     this.motion = 0;
     this.controls.enabled = false;
     this.player.exit();
@@ -431,10 +476,10 @@ export class GameScene extends Phaser.Scene {
       newBest,
       newBestScore,
     };
-    fadeTo(this, victory ? 'Victory' : 'GameOver', data, {
-      ms: victory ? 600 : CONFIG.fadeMs,
-      rgb: victory ? [255, 255, 255] : [0, 0, 0],
-      before: () => this.scene.stop('HUD'),
-    });
+    // The last level ends with a flight to the last country, then the
+    // congratulations screen.
+    const target = victory ? 'Flight' : 'GameOver';
+    const payload = victory ? { country: CONFIG.countries.length - 1, next: 'Victory', payload: data } : data;
+    fadeTo(this, target, payload, { before: () => this.scene.stop('HUD') });
   }
 }

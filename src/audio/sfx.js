@@ -53,6 +53,17 @@ export const SFX = {
     e.tone(t, 880, 0.04, { wave: 'pulse12', vol: 0.08, decay: 0.03, sustain: 0.4 });
   },
 
+  // Magic chime for the fairy-wing double jump.
+  fairy(e, t) {
+    [1319, 1568, 1976, 2637].forEach((f, i) => {
+      e.tone(t + i * 0.045, f, 0.12, { wave: 'pulse12', vol: 0.05, decay: 0.1, sustain: 0.2, release: 0.06 });
+    });
+  },
+
+  plane(e, t) {
+    e.noise(t, 2.2, { type: 'bandpass', freq: 260, sweep: 1400, q: 0.7, vol: 0.22 });
+  },
+
   door(e, t) {
     [392, 523, 659, 784].forEach((f, i) => {
       e.tone(t + i * 0.07, f, 0.08, { wave: 'pulse12', vol: 0.09, decay: 0.06, sustain: 0.4 });

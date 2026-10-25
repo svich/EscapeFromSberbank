@@ -6,6 +6,7 @@ import * as Phaser from 'phaser';
 import { audio } from './audio/index.js';
 import { CONFIG } from './config.js';
 import { BootScene } from './scenes/Boot.js';
+import { FlightScene } from './scenes/Flight.js';
 import { GameScene } from './scenes/Game.js';
 import { GameOverScene } from './scenes/GameOver.js';
 import { HUDScene } from './scenes/HUD.js';
@@ -47,7 +48,7 @@ async function start() {
     },
     input: { activePointers: 3 },
     audio: { noAudio: true },
-    scene: [BootScene, MenuScene, GameScene, HUDScene, PauseScene, GameOverScene, VictoryScene],
+    scene: [BootScene, MenuScene, GameScene, HUDScene, PauseScene, FlightScene, GameOverScene, VictoryScene],
   });
   // Handle for playtest scripts in dev builds.
   if (import.meta.env.DEV) window.__game = game;

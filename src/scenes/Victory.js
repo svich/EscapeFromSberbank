@@ -34,9 +34,9 @@ export class VictoryScene extends Phaser.Scene {
       .play('hero-idle');
     this.tweens.add({ targets: hero, y: G - 40, duration: 220, yoyo: true, repeat: -1, repeatDelay: 700, ease: 'Quad.easeOut' });
 
-    const title = addText(this, W / 2, 40, 'ТЫ СВОБОДНА!', { size: 128, weight: 700, color: '#7ee08f', origin: [0.5, 0] }).setDepth(6);
+    const title = addText(this, W / 2, 40, 'ПОЗДРАВЛЯЕМ!', { size: 128, weight: 700, color: '#7ee08f', origin: [0.5, 0] }).setDepth(6);
     this.tweens.add({ targets: title, y: 28, duration: 600, yoyo: true, repeat: -1, ease: 'Sine.easeInOut' });
-    addText(this, W / 2, 200, 'Заявление подписано. Больше никаких стендапов. Никогда.', {
+    addText(this, W / 2, 200, 'Сербия, Грузия, Турция — ты свободна. Игра окончена.', {
       size: 40,
       weight: 400,
       color: '#ffe0ef',
@@ -47,7 +47,7 @@ export class VictoryScene extends Phaser.Scene {
     addStats(this, 700, 320, [
       ['Время', formatTime(data.time ?? 0)],
       ['Кофе', `x${data.coffees}`, '#ffd23f'],
-      ['Щитов потрачено', data.shieldsUsed],
+      ['Шоколадок съедено', data.shieldsUsed],
       ['Счёт KPI', data.score],
       ['Лучший KPI', `${data.bestScore}${data.newBestScore ? '  НОВЫЙ!' : ''}`, data.newBestScore ? '#7ee08f' : undefined],
     ]);

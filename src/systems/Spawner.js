@@ -24,11 +24,11 @@ export function zoneAt(meters) {
 export class Spawner {
   constructor(scene) {
     this.scene = scene;
-    this.queue = []; // { kind: 'obstacle' | 'coffee' | 'offer', type?, arrival, height?, intro? }
+    this.queue = []; // { kind: 'obstacle' | 'coffee' | 'chocolate', type?, arrival, height?, intro? }
     this.last = null; // last planned obstacle { type, arrival }
     this.introduced = new Set();
     this.recent = [];
-    this.nextOfferAt = PK.offerFirstAt;
+    this.nextChocolateAt = PK.chocolateFirstAt;
     this.done = false; // no more obstacles: the exit runway has been reached
     // Spawn line: off screen even for the widest sprite.
     const widest = Math.max(
@@ -36,6 +36,14 @@ export class Spawner {
       ...Object.values(metrics.pickups).map((m) => m.frameW),
     );
     this.spawnX = Math.max(S.x, CONFIG.width + widest / 2 + 8 * SCALE);
+  }
+
+  // Drops everything planned (after a flight between zones): planning starts
+  // over with the usual first-obstacle delay.
+  restart() {
+    this.queue = [];
+    this.last = null;
+    this.recent = [];
   }
 
   // now: run time (s), speed: scroll (px/s), traveled: px.
@@ -107,12 +115,12 @@ export class Spawner {
     return { type, intro };
   }
 
-  // Coffee rows in free gaps, coffee over/under obstacles, and job offers.
+  // Coffee rows in free gaps, coffee over/under obstacles, and chocolates.
   planPickups(prev, next, meters) {
     const hero = metrics.hero;
     const jump = metrics.jump;
     const coffee = metrics.pickups.coffee;
-    const offer = metrics.pickups.offer;
+    const chocolate = metrics.pickups.chocolate;
     const nextTiming = clearTiming(next.type);
     const freeStart = prev ? prev.arrival + clearTiming(prev.type).tail : next.arrival - nextTiming.lead - 1;
     const freeEnd = next.arrival - nextTiming.lead;
@@ -120,10 +128,10 @@ export class Spawner {
     const mid = (freeStart + freeEnd) / 2;
     const groundH = hero.slideH / 2; // collectible standing or sliding
 
-    if (offer && meters >= this.nextOfferAt && free >= 0.6) {
+    if (chocolate && meters >= this.nextChocolateAt && free >= 0.6) {
       // Just above the standing head: needs a hop.
-      this.queue.push({ kind: 'offer', arrival: mid, height: hero.standH + PK.offerLift + offer.h / 2 });
-      this.nextOfferAt = meters + randRange(PK.offerEvery);
+      this.queue.push({ kind: 'chocolate', arrival: mid, height: hero.standH + PK.chocolateLift + chocolate.h / 2 });
+      this.nextChocolateAt = meters + randRange(PK.chocolateEvery);
     } else if (coffee && free >= 0.75 && Math.random() < PK.lineChance) {
       const n = clamp(Math.floor((free - 0.25) / PK.spacing) + 1, 3, 6);
       const start = mid - ((n - 1) * PK.spacing) / 2;
