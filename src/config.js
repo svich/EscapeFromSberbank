@@ -87,7 +87,7 @@ export const CONFIG = {
     chair: { unlockAfter: 13, speed: px(85), kind: 'jump', fall: 'trip', hint: 'Прыгай!' },
     worker: { unlockAfter: 0, speed: px(28), kind: 'jump', fall: 'trip', hint: 'Прыгай!' },
     money: { unlockAfter: 0, speed: 0, kind: 'jump', fall: 'trip', hint: 'Прыгай!' },
-    safe: { unlockAfter: 0, speed: 0, kind: 'jump', fall: 'knock', hint: 'Прыгай!' },
+    safe: { unlockAfter: 0, speed: 0, kind: 'jump', fall: 'trip', hint: 'Прыгай!' },
     bigman: { unlockAfter: 0, speed: px(30), kind: 'flash', fall: 'knock', hint: 'Ослепи вспышкой!' },
     shelf: { unlockAfter: 0, speed: 0, kind: 'double', fall: 'knock', hint: 'Двойной прыжок!' },
     snowball: { unlockAfter: 0, speed: px(105), kind: 'jump', hint: 'Прыгай!' },
