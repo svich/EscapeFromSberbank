@@ -11,11 +11,13 @@ export const CONFIG = {
   groundY: px(230), // 920, floor top in game coordinates
   pxPerMeter: px(10),
 
-  // World scroll speed (px/s), ramps linearly from start to end over the run,
-  // as the levels' coin goals fill up.
-  speed: { start: px(190), end: px(370) },
+  // World scroll speed (px/s) at the very start; each level ramps its own
+  // speed range (zones[].speed) as its coin goal fills up.
+  speed: { start: px(190) },
 
-  // Levels, in order. coins: how many to collect to finish the level.
+  // Levels, in order. coins: how many to collect to finish the level;
+  // speed: scroll speed (px/s) from the level's start to its goal;
+  // skin: the heroine's outfit (sprite prefix, default 'hero').
 
   zones: [
     {
@@ -24,6 +26,7 @@ export const CONFIG = {
       label: 'Офис',
       subtitle: 'Этаж 7. Сдаём квартальные KPI.',
       coins: 35,
+      speed: [px(190), px(250)],
       weights: { elder: 5, chair: 3 },
     },
     {
@@ -32,6 +35,7 @@ export const CONFIG = {
       label: 'Хранилище',
       subtitle: 'Служебный этаж. Посторонним вход воспрещён.',
       coins: 45,
+      speed: [px(205), px(245)],
       weights: { money: 4, safe: 3, shelf: 4 },
     },
     {
@@ -40,7 +44,9 @@ export const CONFIG = {
       label: 'Улица',
       subtitle: 'Собери на билет. Никаких стендапов.',
       coins: 55,
-      weights: { worker: 5, logo: 4 },
+      speed: [px(200), px(235)],
+      skin: 'heroWinter',
+      weights: { worker: 4, snowball: 3, bigman: 3 },
     },
   ],
 
@@ -58,7 +64,7 @@ export const CONFIG = {
     fallGravityMul: 1.35, // heavier on the way down, snappier arcs
     maxFall: px(800),
     // Jump heights in px. null = derived from obstacle hitboxes at boot:
-    // the ground jump clears elder/chair/logo but not the shelf, the air
+    // the ground jump clears every 'jump' obstacle but not the shelf, the air
     // jump adds enough to get over the shelf.
     jumpApex: null,
     doubleJumpHeight: null,
@@ -73,6 +79,7 @@ export const CONFIG = {
   // unlockAfter: s of run time before it can show up (zone weights pick where).
   // speed: own speed toward the player on top of the scroll (px/s).
   // kind: what clears it (drives spawn gaps and pickup placement).
+  // ('flash': blind him with the phone flash and run through, or double jump).
   // fall: how she goes down on a hit: 'trip' onto her stomach, 'knock' back onto
   // her bottom (default: a hurt hop).
   obstacles: {
@@ -81,8 +88,9 @@ export const CONFIG = {
     worker: { unlockAfter: 0, speed: px(28), kind: 'jump', fall: 'trip', hint: 'Прыгай!' },
     money: { unlockAfter: 0, speed: 0, kind: 'jump', fall: 'trip', hint: 'Прыгай!' },
     safe: { unlockAfter: 0, speed: 0, kind: 'jump', fall: 'knock', hint: 'Прыгай!' },
+    bigman: { unlockAfter: 0, speed: px(30), kind: 'flash', fall: 'knock', hint: 'Ослепи вспышкой!' },
     shelf: { unlockAfter: 0, speed: 0, kind: 'double', fall: 'knock', hint: 'Двойной прыжок!' },
-    logo: { unlockAfter: 0, speed: px(115), kind: 'jump', hint: 'Прыгай!' },
+    snowball: { unlockAfter: 0, speed: px(105), kind: 'jump', hint: 'Прыгай!' },
   },
 
   // Margins used when deriving jump heights from hitboxes (px).
@@ -112,8 +120,9 @@ export const CONFIG = {
 
   pickups: {
     coinScore: 10,
-    lineChance: 0.6, // coin row/arc in a free gap
-    overChance: 0.45, // coin above a jumpable obstacle
+    lineChance: 0.9, // coin row/arc in a free gap
+    rowMax: 8, // coins in a row, at most
+    overChance: 0.75, // coin above a jumpable obstacle
     spacing: 0.13, // s between coins in a row
     chocolateFirstAt: 300, // m
     chocolateEvery: [500, 750], // m, random range between chocolates (extra lives)
@@ -123,13 +132,10 @@ export const CONFIG = {
     coffeeEvery: [9, 16], // s, random wait before each one (from the level start)
   },
 
-  // Coffee dash: faster, with a sparkle trail, smashing through obstacles.
-  dash: {
-    time: 5, // s
-    speedMul: 1.6,
-    rampIn: 0.3, // s to reach full speed
-    rampOut: 0.6, // s of slowing down at the end
-  },
+  flash: { cooldown: 0.4 }, // s between phone flashes
+
+  // Coffee dash: a sparkle trail and smashing through obstacles.
+  dash: { time: 5 }, // s
 
   exit: { offset: px(110) }, // door stops this far past the player at the finish
   deathDelay: 1100, // ms from the hit to the game over screen
@@ -142,3 +148,6 @@ export const CONFIG = {
     muted: 'efs.muted',
   },
 };
+
+// The heroine's outfit (sprite prefix) on a level.
+export const skinForZone = (zone) => CONFIG.zones[zone].skin ?? 'hero';

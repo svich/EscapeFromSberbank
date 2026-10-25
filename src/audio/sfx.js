@@ -18,6 +18,13 @@ export const SFX = {
     e.tone(t + 0.055, 1319, 0.16, { wave: 'pulse25', vol: 0.1, decay: 0.14, sustain: 0.15, release: 0.05 });
   },
 
+  // Phone camera: shutter click and the flash's charge whine.
+  flash(e, t) {
+    e.noise(t, 0.05, { type: 'highpass', freq: 2500, vol: 0.3 });
+    e.noise(t + 0.06, 0.04, { type: 'highpass', freq: 3200, vol: 0.22 });
+    e.tone(t, 1800, 0.18, { wave: 'pulse12', vol: 0.05, decay: 0.15, sustain: 0.2, slide: 3600 });
+  },
+
   // Coffee power-up: a whoosh up into a bright arpeggio.
   dash(e, t) {
     e.noise(t, 0.45, { type: 'bandpass', freq: 400, sweep: 3200, q: 0.8, vol: 0.2 });

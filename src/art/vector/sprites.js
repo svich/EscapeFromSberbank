@@ -15,6 +15,10 @@ const WING_SCALE = 1.4;
 // Backroom props (money pile, safe) drawn chunkier so their outlines match
 // the people's.
 const VAULT_SCALE = 1.4;
+// The big man shares the workers' outline weight; he is just drawn taller.
+const BIGMAN_SCALE = 1.5;
+// Snowball drawn at the props' outline weight.
+const SNOWBALL_SCALE = 1.4;
 
 
 // --- Obstacles ---------------------------------------------------------------
@@ -709,6 +713,221 @@ function workerTrucker(step) {
 
 const WORKERS = [workerJanitor, workerBuilder, workerSteel, workerMechanic, workerLineman, workerTrucker];
 
+// Huge man in a red puffer parka, stomping toward the player: front
+// three-quarter view like the workers, face turned a little to the left, arms
+// at his sides. Two walk frames, then "blinded" by her phone flash: hands
+// over his eyes, leaning back. Legs stay planted; the body bobs with the step.
+const BIGMAN_HEAD = [24, 17];
+const BIGMAN_RED = '#e23b3b';
+const BIGMAN_QUILT = '#b42a30';
+const BIGMAN_GLOVE = '#5d6374';
+const BIGMAN_STEPS = [
+  { front: [17, 71.4], back: [32, 71.4], bob: 0.4, hands: [[9.6, 50.5], [40.6, 49.6]] },
+  { front: [20, 70], back: [30, 71.4], bob: -1, hands: [[11.2, 50], [39.2, 50.4]] },
+];
+
+function bigmanLegs(ctx, front, back, bob) {
+  const boot = '#3a2a22';
+  for (const [hip, [fx, fy], color] of [[[31, 55 + bob], back, '#242836'], [[19, 55 + bob], front, '#2f3442']]) {
+    capsule(ctx, [hip, [fx, fy - 2]], 7.6, color);
+    roundRect(ctx, fx - 4.2, fy - 4.4, 7.6, 6, 2.2, boot);
+    ellipse(ctx, fx - 2.4, fy + 1.2, 5, 2.8, boot);
+    strokePts(ctx, [[fx - 6.4, fy + 3.2], [fx + 1.6, fy + 3.2]], 0.9, '#1f1814');
+  }
+}
+
+function bigmanTorsoPath(c) {
+  c.moveTo(13.5, 28);
+  c.quadraticCurveTo(25, 23.5, 36.5, 28);
+  c.quadraticCurveTo(42.6, 36, 41.8, 56.5);
+  c.quadraticCurveTo(25, 60, 8.2, 56.5);
+  c.quadraticCurveTo(7.4, 36, 13.5, 28);
+}
+
+// Quilted puffer parka: curved channels, a zip and a welt pocket.
+function bigmanParka(ctx) {
+  shape(ctx, bigmanTorsoPath, BIGMAN_RED);
+  ctx.save();
+  ctx.beginPath();
+  bigmanTorsoPath(ctx);
+  ctx.closePath();
+  ctx.clip();
+  for (const y of [34, 40, 46, 52]) {
+    ctx.beginPath();
+    ctx.moveTo(0, y - 1.6);
+    ctx.quadraticCurveTo(25, y + 0.8, 50, y - 1.6);
+    ctx.lineWidth = 1.4;
+    ctx.strokeStyle = 'rgba(255,255,255,0.18)';
+    ctx.stroke();
+    ctx.beginPath();
+    ctx.moveTo(0, y);
+    ctx.quadraticCurveTo(25, y + 2.4, 50, y);
+    ctx.lineWidth = 0.8;
+    ctx.strokeStyle = BIGMAN_QUILT;
+    ctx.stroke();
+  }
+  strokePts(ctx, [[24.4, 26], [24.4, 60]], 0.9, '#7e1c22');
+  ctx.restore();
+  ctx.beginPath();
+  bigmanTorsoPath(ctx);
+  ctx.closePath();
+  outline(ctx);
+  strokePts(ctx, [[14.4, 47.6], [19.2, 46.8]], 1.1, C.outline);
+  strokePts(ctx, [[29.8, 46.8], [34.6, 47.6]], 1.1, C.outline);
+}
+
+// The hood's fur rim, lying around his neck as a collar.
+function bigmanCollar(ctx) {
+  const pts = [];
+  for (let a = Math.PI; a <= Math.PI * 2.001; a += Math.PI / 8) pts.push([25 + Math.cos(a) * 12, 29 + Math.sin(a) * 3.6]);
+  for (const [x, y] of pts) ellipse(ctx, x, y, 2.2, 2.2, '#d8cbb3');
+  for (const [x, y] of pts) ellipse(ctx, x, y, 1.7, 1.7, '#d8cbb3', false);
+  for (const [x, y] of pts.filter((_, i) => i % 2)) ellipse(ctx, x + 0.3, y + 0.5, 0.7, 0.5, '#b8aa90', false);
+}
+
+function bigmanScarf(ctx) {
+  const scarf = '#4b5068';
+  roundRect(ctx, 16.6, 27.4, 4.6, 12.6, [0, 0, 1.2, 1.2], scarf);
+  for (const fx of [17.8, 19, 20.2]) strokePts(ctx, [[fx, 39], [fx, 41.2]], 0.5, scarf);
+  strokePts(ctx, [[16.8, 36.4], [21, 36.4]], 0.8, '#ffd23f');
+  roundRect(ctx, 14.8, 24.6, 18.6, 6, 3, scarf);
+  for (let rx = 16.6; rx < 32; rx += 1.8) strokePts(ctx, [[rx, 26], [rx, 29.6]], 0.45, '#3a3e52');
+}
+
+function bigmanFace(ctx, blind) {
+  const [x, y] = BIGMAN_HEAD;
+  const head = (c) => c.ellipse(x, y, 10.6, 10.2, 0, 0, Math.PI * 2);
+  shape(ctx, head, C.skin);
+  ctx.save();
+  ctx.beginPath();
+  head(ctx);
+  ctx.clip();
+  ellipse(ctx, x - 1, y + 8.6, 10, 5.2, 'rgba(70,74,96,0.24)', false);
+  for (const [dx, dy] of [[-6, 6], [-3.2, 7.6], [0, 7], [3.4, 7.8], [6.4, 6.2], [-4.8, 9], [1.8, 9.2], [-1.4, 10]]) {
+    ellipse(ctx, x + dx, y + dy, 0.32, 0.32, 'rgba(60,58,72,0.45)', false);
+  }
+  ctx.restore();
+  ctx.beginPath();
+  head(ctx);
+  outline(ctx);
+  ctx.lineCap = 'round';
+  if (blind) {
+    // Eyes squeezed shut, brows scrunched, teeth gritted.
+    strokePts(ctx, [[x - 4.4, y - 0.4], [x - 2, y + 0.9], [x - 4.4, y + 2.2]], 1.1, C.lash);
+    strokePts(ctx, [[x + 2.4, y - 0.4], [x, y + 0.9], [x + 2.4, y + 2.2]], 1.1, C.lash);
+    strokePts(ctx, [[x - 5.4, y - 2.6], [x - 3.4, y - 3.8], [x - 1.4, y - 2.4]], 1.5, '#3a2a22');
+    strokePts(ctx, [[x - 0.6, y - 2.4], [x + 1.4, y - 3.8], [x + 3.4, y - 2.6]], 1.5, '#3a2a22');
+    strokePts(ctx, [[x - 2, y - 5.8], [x - 0.2, y - 5.4]], 0.5, C.skinShade);
+    ellipse(ctx, x - 1, y + 3.6, 1.8, 1.4, '#f2a48e', false);
+    roundRect(ctx, x - 4, y + 5.8, 7.4, 3, 1.3, C.white);
+    strokePts(ctx, [[x - 3.6, y + 7.3], [x + 3, y + 7.3]], 0.5, C.lash);
+    for (const tx of [x - 1.6, x + 0.4, x + 2.2]) strokePts(ctx, [[tx, y + 6.2], [tx, y + 8.4]], 0.4, C.lash);
+    return;
+  }
+  for (const [ex, dir] of [[x - 4.4, 1], [x + 2, -1]]) {
+    ellipse(ctx, ex, y + 1.2, 0.95, 1.2, C.lash, false);
+    ellipse(ctx, ex - 0.35, y + 0.75, 0.32, 0.32, C.white, false);
+    strokePts(ctx, [[ex - 2 * dir, y - 2.6], [ex + 1.6 * dir, y - 1.2]], 1.7, '#3a2a22');
+  }
+  for (const bx of [x - 6.8, x + 4.8]) ellipse(ctx, bx, y + 3.8, 1.9, 1.1, 'rgba(255,120,130,0.45)', false);
+  ellipse(ctx, x - 1.6, y + 3.4, 1.8, 1.4, '#f2a48e', false);
+  ctx.beginPath();
+  ctx.moveTo(x - 3.8, y + 7.2);
+  ctx.quadraticCurveTo(x - 1.4, y + 6, x + 1, y + 7.2);
+  ctx.lineWidth = 0.9;
+  ctx.strokeStyle = C.lash;
+  ctx.stroke();
+}
+
+// Dark knit beanie with a ribbed cuff.
+function bigmanHat(ctx) {
+  const [x, y] = BIGMAN_HEAD;
+  ctx.beginPath();
+  ctx.arc(x + 0.3, y - 3.8, 10.8, Math.PI, 0);
+  ctx.closePath();
+  ctx.fillStyle = '#30364a';
+  ctx.fill();
+  outline(ctx);
+  roundRect(ctx, x - 11.2, y - 6.8, 22.8, 4.8, 2.4, '#262b3c');
+  for (let rx = x - 9.6; rx < x + 10.6; rx += 1.7) strokePts(ctx, [[rx, y - 6], [rx, y - 2.8]], 0.5, '#1c2030');
+}
+
+function bigmanSleeve(ctx, shoulder, hand) {
+  capsule(ctx, [shoulder, hand], 7.4, BIGMAN_RED);
+  const [dx, dy] = [hand[0] - shoulder[0], hand[1] - shoulder[1]];
+  const len = Math.hypot(dx, dy);
+  const [nx, ny] = [(-dy / len) * 3.7, (dx / len) * 3.7];
+  for (const t of [0.35, 0.68]) {
+    const [px, py] = [shoulder[0] + dx * t, shoulder[1] + dy * t];
+    strokePts(ctx, [[px - nx, py - ny], [px + nx, py + ny]], 0.8, BIGMAN_QUILT);
+  }
+}
+
+// Big knit mitten, fingers up; rot tilts it, flip puts the thumb on the right.
+function bigmanGlove(ctx, x, y, rot = 0, flip = false) {
+  ctx.save();
+  ctx.translate(x, y);
+  ctx.rotate(rot);
+  if (flip) ctx.scale(-1, 1);
+  ellipse(ctx, -2.6, 1.2, 1.3, 2, BIGMAN_GLOVE);
+  ellipse(ctx, 0, 0, 3.1, 4.3, BIGMAN_GLOVE);
+  strokePts(ctx, [[-2.2, 2.8], [2.2, 2.8]], 0.8, '#3a3e4c');
+  ellipse(ctx, -0.9, -2, 0.9, 0.7, 'rgba(255,255,255,0.3)', false);
+  ctx.restore();
+}
+
+function bigmanWalk({ front, back, bob, hands: [frontHand, backHand] }) {
+  return (ctx) => {
+    bigmanLegs(ctx, front, back, bob);
+    ctx.translate(0, bob);
+    bigmanParka(ctx);
+    bigmanCollar(ctx);
+    bigmanScarf(ctx);
+    bigmanSleeve(ctx, [36.4, 31.5], backHand);
+    bigmanGlove(ctx, backHand[0], backHand[1] + 1.6, Math.PI);
+    bigmanFace(ctx, false);
+    bigmanHat(ctx);
+    bigmanSleeve(ctx, [13.6, 31.5], frontHand);
+    bigmanGlove(ctx, frontHand[0], frontHand[1] + 1.6, Math.PI);
+  };
+}
+
+function flashStar(ctx, x, y, r, fill = '#fffbe0', edge = '#e0a020') {
+  shape(ctx, (c) => {
+    c.moveTo(x, y - r);
+    c.quadraticCurveTo(x, y, x + r, y);
+    c.quadraticCurveTo(x, y, x, y + r);
+    c.quadraticCurveTo(x, y, x - r, y);
+    c.quadraticCurveTo(x, y, x, y - r);
+  }, fill, false);
+  ctx.lineWidth = 0.5;
+  ctx.strokeStyle = edge;
+  ctx.stroke();
+}
+
+// Blinded by the flash: feet as in step 0, upper body leaning back, both
+// mittens pressed to his face.
+function bigmanBlind(ctx) {
+  const { front, back } = BIGMAN_STEPS[0];
+  const [x, y] = BIGMAN_HEAD;
+  bigmanLegs(ctx, front, back, 0);
+  ctx.save();
+  ctx.translate(25, 56);
+  ctx.rotate(0.05);
+  ctx.translate(-25, -56);
+  bigmanParka(ctx);
+  bigmanCollar(ctx);
+  bigmanScarf(ctx);
+  bigmanSleeve(ctx, [36, 31.6], [x + 8.4, y + 4.4]);
+  bigmanFace(ctx, true);
+  bigmanHat(ctx);
+  bigmanGlove(ctx, x + 7, y + 2.2, -0.35);
+  bigmanSleeve(ctx, [14, 32], [x - 9, y + 5]);
+  bigmanGlove(ctx, x - 7.8, y + 2.4, 0.35, true);
+  ctx.restore();
+  for (const [sx, sy, r] of [[7, 9, 2.4], [4.6, 19, 1.7], [8.6, 27, 1.3], [41, 6, 1.4]]) flashStar(ctx, sx, sy, r);
+}
+
 function chair(ctx) {
   for (const x of [4, 24]) capsule(ctx, [[14, 33], [x, 37]], 2, C.suitShade);
   capsule(ctx, [[14, 33], [14, 37.5]], 2, C.suitShade);
@@ -968,18 +1187,69 @@ function safe(ctx) {
   }, steelDark, false);
 }
 
-function logo(ctx) {
-  const g = ctx.createRadialGradient(15, 13, 2, 20, 20, 19);
-  g.addColorStop(0, '#6bd884');
-  g.addColorStop(0.55, C.green);
-  g.addColorStop(1, C.greenDark);
-  ellipse(ctx, 20, 20, 18.6, 18.6, g);
-  strokePts(ctx, [[11, 21], [17.5, 27], [29, 13]], 4.4 + OW * 2, C.outline);
-  strokePts(ctx, [[11, 21], [17.5, 27], [29, 13]], 4.4, C.white);
+// Big clean snowball rolling at the player: lumpy rim, cool shading, and
+// faint packed-snow seams so the spin reads.
+const SNOW_C = 22; // centre of the 44-unit frame; the game spins it about this
+const SNOW_R = 20.2;
+
+function snowballPath(c) {
+  const n = 60;
+  const pts = [];
+  for (let i = 0; i < n; i++) {
+    const a = (i / n) * Math.PI * 2;
+    const r = SNOW_R + 0.3 * Math.sin(4 * a + 0.3) + 0.22 * Math.sin(7 * a + 1.1) + 0.16 * Math.sin(11 * a + 2);
+    pts.push([SNOW_C + Math.cos(a) * r, SNOW_C + Math.sin(a) * r]);
+  }
+  const mid = (p, q) => [(p[0] + q[0]) / 2, (p[1] + q[1]) / 2];
+  const start = mid(pts[n - 1], pts[0]);
+  c.moveTo(start[0], start[1]);
+  for (let i = 0; i < n; i++) {
+    const m = mid(pts[i], pts[(i + 1) % n]);
+    c.quadraticCurveTo(pts[i][0], pts[i][1], m[0], m[1]);
+  }
+}
+
+function snowball(ctx) {
+  const k = SNOW_C;
+  const g = ctx.createRadialGradient(k - 7, k - 8, 1, k - 2, k - 2, SNOW_R + 3);
+  g.addColorStop(0, '#ffffff');
+  g.addColorStop(0.5, '#f0f5fb');
+  g.addColorStop(0.82, '#cfdbea');
+  g.addColorStop(1, '#a9bbd2');
+  shape(ctx, snowballPath, g);
   ctx.save();
-  ctx.translate(12.5, 10);
-  ctx.rotate(-0.6);
-  ellipse(ctx, 0, 0, 4.2, 2, 'rgba(255,255,255,0.45)', false);
+  ctx.beginPath();
+  snowballPath(ctx);
+  ctx.closePath();
+  ctx.clip();
+  // Packed-snow seams and dimples.
+  ctx.lineCap = 'round';
+  for (const [x0, y0, cx, cy, x1, y1] of [
+    [k - 14, k + 2, k - 6, k + 6, k + 2, k + 2],
+    [k + 4, k + 12, k + 10, k + 8, k + 16, k + 10],
+    [k - 4, k - 14, k + 2, k - 10, k + 10, k - 13],
+  ]) {
+    ctx.beginPath();
+    ctx.moveTo(x0, y0);
+    ctx.quadraticCurveTo(cx, cy, x1, y1);
+    ctx.lineWidth = 0.7;
+    ctx.strokeStyle = 'rgba(120,145,180,0.55)';
+    ctx.stroke();
+  }
+  for (const [x, y, r] of [[k + 9, k - 3, 1.4], [k - 9, k + 11, 1.2], [k + 2, k + 16, 1], [k + 14, k + 3, 0.9]]) {
+    ellipse(ctx, x, y, r, r * 0.7, 'rgba(120,145,180,0.35)', false);
+    ellipse(ctx, x - 0.3, y - 0.4, r * 0.7, r * 0.45, 'rgba(255,255,255,0.8)', false);
+  }
+  ctx.restore();
+  ctx.beginPath();
+  snowballPath(ctx);
+  ctx.closePath();
+  outline(ctx);
+  // Highlight.
+  ctx.save();
+  ctx.translate(k - 8, k - 10);
+  ctx.rotate(-0.7);
+  ellipse(ctx, 0, 0, 4.6, 2.2, 'rgba(255,255,255,0.95)', false);
   ctx.restore();
 }
 
@@ -1293,6 +1563,8 @@ export function buildSprites() {
   return {
     hero: buildHero(UNIT),
     heroDown: buildHeroDown(UNIT),
+    heroWinter: buildHero(UNIT, { winter: true }),
+    heroWinterDown: buildHeroDown(UNIT, { winter: true }),
     elder: {
       // Drawn 4 units down in a taller frame: headroom for tall hats.
       ...sheet(
@@ -1314,11 +1586,20 @@ export function buildSprites() {
       variants: true,
       body: toPx(UNIT * WORKER_SCALE)({ x: 11, y: 7.4, w: 25, h: 42 }),
     },
+    bigman: {
+      ...sheet([...BIGMAN_STEPS.map(bigmanWalk), bigmanBlind], 50, 76, BIGMAN_SCALE),
+      anims: { walk: { frames: [0, 1], fps: 4 }, blind: { frames: [2], fps: 1 } },
+      body: toPx(UNIT * BIGMAN_SCALE)({ x: 9.5, y: 6.6, w: 32, h: 69 }),
+    },
     chair: { ...sheet([chair], 28, 42), body: px({ x: 3, y: 2, w: 22, h: 39 }) },
     shelf: { ...sheet([shelf], 48, 114), body: px({ x: 3, y: 1, w: 42, h: 112 }) },
     money: { ...sheet([money], 44, 40, VAULT_SCALE), body: toPx(UNIT * VAULT_SCALE)({ x: 3, y: 6.4, w: 38, h: 33 }) },
     safe: { ...sheet([safe], 40, 46, VAULT_SCALE), body: toPx(UNIT * VAULT_SCALE)({ x: 2.6, y: 3.6, w: 34.8, h: 41.8 }) },
-    logo: { ...sheet([logo], 40, 40), body: px({ x: 2, y: 2, w: 36, h: 36 }), circle: px({ x: 20, y: 20, r: 18 }) },
+    snowball: {
+      ...sheet([snowball], 44, 44, SNOWBALL_SCALE),
+      body: toPx(UNIT * SNOWBALL_SCALE)({ x: 2, y: 2, w: 40, h: 40 }),
+      circle: toPx(UNIT * SNOWBALL_SCALE)({ x: SNOW_C, y: SNOW_C, r: 20 }),
+    },
     coffee: {
       ...sheet([coffee(0), coffee(Math.PI)], 24, 32),
       anims: { steam: { frames: [0, 1], fps: 3 } },

@@ -67,7 +67,9 @@ function deriveJump() {
   const P = CONFIG.player;
   const M = CONFIG.jumpMargins;
   const o = metrics.obstacles;
-  const lows = ['elder', 'chair', 'logo'].filter((t) => o[t]).map((t) => o[t].top);
+  const lows = Object.keys(o)
+    .filter((t) => CONFIG.obstacles[t].kind === 'jump')
+    .map((t) => o[t].top);
   const low = lows.length ? Math.max(...lows) : M.minAir;
   const tall = o.shelf ? o.shelf.top : low + 2 * M.overLow;
 
@@ -116,6 +118,7 @@ export function clearTiming(type) {
   const T = CONFIG.spawn.timing;
   const kind = CONFIG.obstacles[type].kind;
   const j = metrics.jump;
-  if (kind === 'double') return { lead: j.double * T.double.lead, tail: j.double * T.double.tail };
+  // A big man is flashed or double-jumped: leave room for the double jump.
+  if (kind === 'double' || kind === 'flash') return { lead: j.double * T.double.lead, tail: j.double * T.double.tail };
   return { lead: j.single * T.jump.lead, tail: j.single * T.jump.tail };
 }

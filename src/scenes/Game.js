@@ -1,6 +1,6 @@
 import * as Phaser from 'phaser';
 import { audio } from '../audio/index.js';
-import { CONFIG, SCALE } from '../config.js';
+import { CONFIG, SCALE, skinForZone } from '../config.js';
 import { TAXI_DOOR } from '../art/vector/sprites.js';
 import { Player } from '../objects/Player.js';
 import { storage } from '../storage.js';
@@ -50,7 +50,7 @@ export class GameScene extends Phaser.Scene {
     this.progress = 0; // levels done plus this level's share of its coin goal, over all levels
     this.exitOpen = false;
     this.dash = 0; // s of coffee dash left
-    this.dashTime = 0; // s since the coffee kicked in
+    this.flashCooldown = 0; // s until the phone flash is ready again
     this.shield = from.shield ?? false;
     this.shieldsUsed = from.shieldsUsed ?? 0;
     this.invuln = 0;
@@ -69,8 +69,11 @@ export class GameScene extends Phaser.Scene {
     this.obstacles = this.physics.add.group({ allowGravity: false, immovable: true });
     this.pickups = this.physics.add.group({ allowGravity: false, immovable: true });
     this.player = new Player(this, CONFIG.player.x).setDepth(20);
+    this.player.setSkin(skinForZone(this.zone));
     this.shieldFx = this.add.image(0, 0, 'shield-bubble').setDepth(21).setVisible(false);
     this.fx = new Fx(this);
+    this.flashVeil = this.add.rectangle(0, 0, W, H, 0xffffff).setOrigin(0, 0).setDepth(35).setAlpha(0);
+    this.dashGlow = this.add.image(0, 0, 'fx-dot').setDepth(19).setScale(14).setBlendMode(Phaser.BlendModes.ADD).setVisible(false);
     this.fairy = new Fairy(this, this.player);
     this.spawner = new Spawner(this);
     this.controls = new Controls(this, {
@@ -132,10 +135,12 @@ export class GameScene extends Phaser.Scene {
 
     if (this.mode === 'run') {
       this.runTime += dt;
+      this.flashCooldown = Math.max(0, this.flashCooldown - dt);
       this.updateDash(dt);
-      const goal = CONFIG.zones[this.zone].coins;
-      this.progress = (this.zone + Math.min(1, this.levelCoins / goal)) / CONFIG.zones.length;
-      this.speed = Phaser.Math.Linear(CONFIG.speed.start, CONFIG.speed.end, this.progress) * this.dashBoost();
+      const level = CONFIG.zones[this.zone];
+      const share = Math.min(1, this.levelCoins / level.coins);
+      this.progress = (this.zone + share) / CONFIG.zones.length;
+      this.speed = Phaser.Math.Linear(...level.speed, share);
       this.player.anims.timeScale = Phaser.Math.Clamp(this.speed / CONFIG.speed.start, 1, 1.8);
     }
     const scroll = this.speed * this.motion;
@@ -148,7 +153,9 @@ export class GameScene extends Phaser.Scene {
     this.moveObjects(dt, scroll);
     this.updateDoor();
 
-    this.player.tick(dt, this.controls.read());
+    const input = this.controls.read();
+    if (input.flashPressed) this.flash();
+    this.player.tick(dt, input);
     this.updatePlayerFx(dt);
     this.fairy.update();
     this.publishState();
@@ -223,6 +230,7 @@ export class GameScene extends Phaser.Scene {
     this.motion = 1;
     this.player.reenter(CONFIG.player.x);
     this.zone = this.nextZone;
+    this.player.setSkin(skinForZone(this.zone));
     this.levelCoins = 0;
     this.levelStart = this.checkpoint();
     this.backdrop.setZone(this.zone);
@@ -307,6 +315,7 @@ export class GameScene extends Phaser.Scene {
       o.x -= dx;
       o.age += dt;
       if (o.rollRadius) o.angle -= Phaser.Math.RadToDeg(dx / o.rollRadius);
+      if (o.kind === 'snowball' && Math.random() < dt * 10) this.fx.puffAt(o.x + o.rollRadius * 0.6, G, 2);
       if (o.hint) o.hint.setPosition(o.x, o.y - o.hintLift);
       if (o.x < -o.displayWidth) this.removeObstacle(o);
     }
@@ -343,7 +352,7 @@ export class GameScene extends Phaser.Scene {
   // --- collisions ------------------------------------------------------------
 
   hitObstacle(_player, o) {
-    if (this.mode !== 'run' || o.knocked) return;
+    if (this.mode !== 'run' || o.knocked || o.blinded) return;
     if (this.dash > 0) {
       this.smash(o);
       return;
@@ -351,6 +360,38 @@ export class GameScene extends Phaser.Scene {
     if (this.invuln > 0) return;
     if (this.shield) this.absorbHit(o);
     else this.die(o);
+  }
+
+  // Phone flash: blinds every big man ahead on screen, who stops, covers his
+  // eyes and lets her run through. Also called by the HUD's touch button.
+  flash() {
+    if (this.mode !== 'run' || this.flashCooldown > 0) return;
+    this.flashCooldown = CONFIG.flash.cooldown;
+    const p = this.player;
+    p.flash();
+    audio.sfx('flash');
+    const glow = this.add
+      .image(p.x + px(9), p.y - px(4), 'fx-dot')
+      .setDepth(24)
+      .setBlendMode(Phaser.BlendModes.ADD)
+      .setScale(4);
+    this.tweens.add({ targets: glow, scale: 26, alpha: 0, duration: 260, ease: 'Quad.easeOut', onComplete: () => glow.destroy() });
+    this.flashVeil.setAlpha(0.45);
+    this.tweens.add({ targets: this.flashVeil, alpha: 0, duration: 220 });
+    for (const o of this.obstacles.getChildren()) {
+      if (o.kind === 'bigman' && !o.blinded && !o.knocked && o.x > p.x && o.x < W + o.displayWidth / 2) this.blind(o);
+    }
+  }
+
+  blind(o) {
+    o.blinded = true;
+    o.ownSpeed = 0;
+    o.body.enable = false;
+    o.play('bigman-blind');
+    if (o.hint) o.hint.destroy();
+    o.hint = null;
+    this.fx.popText(o.x, o.y - o.displayHeight, 'Ай!', '#ffffff');
+    this.tweens.add({ targets: o, angle: { from: -3, to: 3 }, duration: 90, yoyo: true, repeat: 3, onComplete: () => o.setAngle(0) });
   }
 
   // Coffee dash: obstacles go flying instead of her.
@@ -404,7 +445,7 @@ export class GameScene extends Phaser.Scene {
       this.startDash();
       audio.sfx('dash');
       this.fx.sparkle(x, y, false, 18);
-      this.fx.popText(x, y - px(8), 'Кофе! Полный вперёд!', '#ff9a3c');
+      this.fx.popText(x, y - px(8), 'Кофе! Сношу всё!', '#ff9a3c');
     } else if (this.shield) {
       audio.sfx('shieldGet');
       this.fx.sparkle(x, y, true, 12);
@@ -428,26 +469,18 @@ export class GameScene extends Phaser.Scene {
 
   startDash() {
     this.dash = CONFIG.dash.time;
-    this.dashTime = 0;
   }
 
   updateDash(dt) {
     if (this.dash <= 0) return;
-    this.dashTime += dt;
     this.dash -= dt;
     if (this.dash <= 0) this.endDash();
   }
 
   endDash() {
     this.dash = 0;
-    this.player.setAlpha(1);
-  }
-
-  // Speed multiplier: eases in as the coffee kicks in, out as it wears off.
-  dashBoost() {
-    if (this.dash <= 0) return 1;
-    const { speedMul, rampIn, rampOut } = CONFIG.dash;
-    return 1 + (speedMul - 1) * Math.min(1, this.dashTime / rampIn, this.dash / rampOut);
+    this.player.setAlpha(1).clearTint();
+    this.dashGlow.setVisible(false);
   }
 
   // --- player feedback -------------------------------------------------------
@@ -459,8 +492,18 @@ export class GameScene extends Phaser.Scene {
     this.fx.setDust(onFloor || skidding, skidding ? p.body.center.x + px(6) : p.x - px(6), G - px(1));
     const dashing = this.dash > 0 && this.mode === 'run';
     this.fx.setDashTrail(dashing, p.body.center.x - px(4), p.body.center.y);
-    // Blinks for the last second so the end of the dash doesn't surprise.
-    if (dashing) p.setAlpha(this.dash < 1 && Math.floor(this.dash * 8) % 2 ? 0.55 : 1);
+    if (dashing) {
+      // Rainbow shine: her colours cycle through the hues over a pulsing glow,
+      // and she blinks for the last second so the end doesn't surprise.
+      const hue = (this.runTime * 1.5) % 1;
+      p.setTint(Phaser.Display.Color.HSVToRGB(hue, 0.4, 1).color);
+      p.setAlpha(this.dash < 1 && Math.floor(this.dash * 8) % 2 ? 0.55 : 1);
+      this.dashGlow
+        .setVisible(true)
+        .setPosition(p.body.center.x, p.body.center.y)
+        .setTint(Phaser.Display.Color.HSVToRGB((hue + 0.5) % 1, 0.8, 1).color)
+        .setAlpha(0.5 + Math.sin(this.runTime * 12) * 0.15);
+    }
 
     this.shieldFx.setVisible(this.shield && this.mode === 'run');
     if (this.shieldFx.visible) {

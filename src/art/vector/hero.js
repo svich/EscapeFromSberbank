@@ -7,6 +7,29 @@ const FRAME_W = 64;
 const FRAME_H = 80;
 const FEET_Y = 77.8;
 
+// Which outfit the part functions draw. buildHero / buildHeroDown set it while
+// their sheet renders: the winter one (for the street) is a long white teddy
+// coat, a chunky scarf, a beige hood over a knit beanie and boots.
+let winter = false;
+function withOutfit(isWinter, build) {
+  winter = isWinter;
+  try {
+    return build();
+  } finally {
+    winter = false;
+  }
+}
+const WINTER = {
+  coat: '#f6f3ec',
+  coatShade: '#e2dccf',
+  curl: 'rgba(170,158,140,0.45)',
+  hood: '#d8c2a2',
+  hoodShade: '#c3a983',
+  beanie: '#4b3a37',
+  boot: '#5b4636',
+  bootShade: '#47372b',
+};
+
 // --- Head --------------------------------------------------------------------
 
 const HEAD_R = 18.5;
@@ -47,12 +70,10 @@ function eye(ctx, x, y, rx, ry, outer, expr) {
   strokePts(ctx, [[wx, y - ry * 0.5], [wx + outer * 1.5, y - ry * 0.85]], 1.1, C.lash);
 }
 
-function head(ctx, cx, cy, expr) {
+// Blush, eyes, brows (unless a hat covers them), nose and mouth.
+function face(ctx, cx, cy, expr, brows = true) {
   const fx = cx + 2.5;
   const fy = cy + 4.5;
-  ellipse(ctx, cx, cy, HEAD_R, HEAD_R, C.hair);
-  ellipse(ctx, fx, fy, 14, 14.5, C.skin);
-
   // Blush.
   for (const bx of [fx - 9, fx + 10]) {
     const g = ctx.createRadialGradient(bx, fy + 5.5, 0, bx, fy + 5.5, 3.8);
@@ -64,8 +85,10 @@ function head(ctx, cx, cy, expr) {
 
   eye(ctx, cx - 3, cy + 6, 3.3, 4.3, -1, expr);
   eye(ctx, cx + 8.5, cy + 6, 2.9, 4.1, 1, expr);
-  strokePts(ctx, [[cx - 6, cy - 0.6], [cx - 3.2, cy - 1.6], [cx - 0.6, cy - 1.2]], 1.1, C.hairShade);
-  strokePts(ctx, [[cx + 6.4, cy - 1.2], [cx + 8.8, cy - 1.7], [cx + 11, cy - 0.8]], 1.1, C.hairShade);
+  if (brows) {
+    strokePts(ctx, [[cx - 6, cy - 0.6], [cx - 3.2, cy - 1.6], [cx - 0.6, cy - 1.2]], 1.1, C.hairShade);
+    strokePts(ctx, [[cx + 6.4, cy - 1.2], [cx + 8.8, cy - 1.7], [cx + 11, cy - 0.8]], 1.1, C.hairShade);
+  }
   strokePts(ctx, [[fx + 3.2, fy + 4.4], [fx + 3.8, fy + 5.4]], 1, C.skinShade);
   const mx = fx + 0.6;
   const my = fy + 8.6;
@@ -80,6 +103,49 @@ function head(ctx, cx, cy, expr) {
     ctx.lineCap = 'round';
     ctx.stroke();
   }
+}
+
+// Winter: a beige hood framing the face, a band of dark knit beanie on the
+// forehead under its rim.
+function hoodedHead(ctx, cx, cy, expr) {
+  const fx = cx + 2.5;
+  const fy = cy + 4.5;
+  const rim = 15.6;
+  ellipse(ctx, cx - 1, cy + 1.5, HEAD_R + 2.2, HEAD_R + 2.6, WINTER.hood);
+  ellipse(ctx, fx, fy, 14, 14.5, C.skin);
+  face(ctx, cx, cy, expr, false);
+  ctx.save();
+  ctx.beginPath();
+  ctx.arc(fx, fy, rim, 0, Math.PI * 2);
+  ctx.clip();
+  shape(ctx, (c) => {
+    c.moveTo(cx - 16, cy + 2);
+    c.quadraticCurveTo(fx, cy - 3.5, cx + 21, cy + 1.5);
+    c.lineTo(cx + 21, cy - 16);
+    c.lineTo(cx - 16, cy - 16);
+  }, WINTER.beanie);
+  ctx.fillStyle = 'rgba(255,255,255,0.12)';
+  for (let x = cx - 14; x < cx + 20; x += 2.4) ctx.fillRect(x, cy - 14, 0.8, 14);
+  ctx.restore();
+  // The hood's front edge around the face, open at the chin (scarf there).
+  ctx.beginPath();
+  ctx.arc(fx, fy, rim, Math.PI * 0.55, Math.PI * 1.95);
+  ctx.lineWidth = 3.6;
+  ctx.strokeStyle = WINTER.hoodShade;
+  ctx.lineCap = 'round';
+  ctx.stroke();
+}
+
+function head(ctx, cx, cy, expr) {
+  if (winter) {
+    hoodedHead(ctx, cx, cy, expr);
+    return;
+  }
+  const fx = cx + 2.5;
+  const fy = cy + 4.5;
+  ellipse(ctx, cx, cy, HEAD_R, HEAD_R, C.hair);
+  ellipse(ctx, fx, fy, 14, 14.5, C.skin);
+  face(ctx, cx, cy, expr);
 
   // Front hair: middle part, hairline framing the face, strand on the far side.
   const hairline = (c) => {
@@ -129,6 +195,7 @@ function head(ctx, cx, cy, expr) {
 
 // Low ponytail: a tapered, swaying strand from the back of the head.
 function ponytail(ctx, [bx, by], [dx, dy], phase, amp = 1) {
+  if (winter) return;
   const n = 7;
   const step = 2.6;
   const len = Math.hypot(dx, dy);
@@ -163,7 +230,54 @@ function ponytail(ctx, [bx, by], [dx, dy], phase, amp = 1) {
 
 // --- Body --------------------------------------------------------------------
 
+// Long belted teddy coat with big lapels and a chunky scarf.
+function coat(ctx, y) {
+  shape(ctx, (c) => {
+    c.moveTo(25.5, y + 43);
+    c.quadraticCurveTo(34.2, y + 40.5, 43, y + 43);
+    c.quadraticCurveTo(45.6, y + 55, 47, y + 68);
+    c.quadraticCurveTo(34.5, y + 70, 22, y + 68);
+    c.quadraticCurveTo(23.2, y + 55, 25.5, y + 43);
+  }, WINTER.coat);
+  ctx.strokeStyle = WINTER.curl;
+  ctx.lineWidth = 0.5;
+  for (const [cx, cy] of [[27, 49], [31, 61], [41, 50], [44, 62], [26, 64], [38, 66], [29, 53], [42, 57]]) {
+    ctx.beginPath();
+    ctx.arc(cx, y + cy, 0.9, Math.PI, Math.PI * 2);
+    ctx.stroke();
+  }
+  shape(ctx, (c) => {
+    c.moveTo(27.5, y + 43.5);
+    c.lineTo(34.4, y + 56);
+    c.lineTo(30.6, y + 56);
+    c.lineTo(25.6, y + 47.5);
+  }, WINTER.coatShade);
+  shape(ctx, (c) => {
+    c.moveTo(41, y + 43.5);
+    c.lineTo(34.6, y + 56);
+    c.lineTo(38.6, y + 56);
+    c.lineTo(43.2, y + 47.5);
+  }, WINTER.coatShade);
+  shape(ctx, (c) => {
+    c.moveTo(23.6, y + 55.4);
+    c.lineTo(45.4, y + 55.4);
+    c.lineTo(45.7, y + 58.4);
+    c.lineTo(23.2, y + 58.4);
+  }, WINTER.coat);
+  capsule(ctx, [[37.5, y + 57.5], [38.5, y + 63.5]], 2.2, WINTER.coat);
+  capsule(ctx, [[37.5, y + 57.5], [36, y + 63]], 2.2, WINTER.coat);
+  ellipse(ctx, 37.5, y + 57, 2.4, 2, WINTER.coat);
+  // Scarf wrapped up to the chin.
+  ellipse(ctx, 34.5, y + 42.6, 10.6, 4.4, WINTER.coat);
+  ellipse(ctx, 30.5, y + 46, 4, 3.4, WINTER.coat);
+  strokePts(ctx, [[27, y + 42], [42, y + 41.5]], 0.6, WINTER.curl);
+}
+
 function torso(ctx, y) {
+  if (winter) {
+    coat(ctx, y);
+    return;
+  }
   ctx.fillStyle = C.skinShade;
   ctx.fillRect(32, y + 39.5, 4.5, 5);
   ellipse(ctx, 34.2, y + 45, 8.2, 3.6, C.skin);
@@ -193,13 +307,31 @@ function leg(ctx, hip, [knee, foot], color) {
   const k = add(hip, knee);
   const f = add(hip, foot);
   capsule(ctx, [hip, k, f], 7, color);
+  if (winter) {
+    const boot = color === C.jeans ? WINTER.boot : WINTER.bootShade;
+    capsule(ctx, [[f[0], f[1] - 3.5], f], 7.6, boot);
+    ellipse(ctx, f[0] + 1.6, f[1] + 1.4, 4.7, 2.7, boot);
+    strokePts(ctx, [[f[0] - 2.6, f[1] + 3.3], [f[0] + 5.8, f[1] + 3.3]], 1, WINTER.bootShade);
+    return;
+  }
   ellipse(ctx, f[0] + 1.6, f[1] + 1.4, 4.3, 2.4, color === C.jeans ? C.shoe : C.shoeShade);
   strokePts(ctx, [[f[0] - 2.2, f[1] + 3], [f[0] + 5.4, f[1] + 3]], 0.9, C.shoeShade);
 }
 
+// Arms are drawn this much longer than their joint offsets say.
+const ARM = 1.3;
+const reach = (shoulder, [dx, dy]) => add(shoulder, [dx * ARM, dy * ARM]);
+
 function arm(ctx, shoulder, [elbow, hand], color, bracelet) {
-  const e = add(shoulder, elbow);
-  const h = add(shoulder, hand);
+  const e = reach(shoulder, elbow);
+  const h = reach(shoulder, hand);
+  if (winter) {
+    const near = color === C.skin;
+    const cuff = [h[0] + (e[0] - h[0]) * 0.25, h[1] + (e[1] - h[1]) * 0.25];
+    capsule(ctx, [shoulder, e, cuff], 5.6, near ? WINTER.coat : WINTER.coatShade);
+    ellipse(ctx, h[0], h[1], 2.2, 2.2, color);
+    return;
+  }
   capsule(ctx, [shoulder, e, h], 4.2, color);
   ellipse(ctx, h[0], h[1], 2.3, 2.3, color);
   if (!bracelet) return;
@@ -265,7 +397,10 @@ function drawPose(ctx, p) {
   torso(ctx, y);
   head(ctx, 34, headY, p.face ?? 'open');
   arm(ctx, [30, 46 + y], p.armF, C.skin, true);
-  if (p.phone) phone(ctx, ...p.phone);
+  if (p.phone) {
+    const [hx, hy] = reach([30, 46 + y], p.armF[1]);
+    phone(ctx, hx - 2.6, hy - 9.6, p.phone.flash);
+  }
 }
 
 // --- Falls -------------------------------------------------------------------
@@ -369,10 +504,10 @@ function drawSit(ctx, k) {
   dizzy(ctx, 39, 21, k * 1.2);
 }
 
-export function buildHeroDown(scale) {
+export function buildHeroDown(scale, { winter: isWinter = false } = {}) {
   const frames = [drawTrip, (c) => drawProne(c, 0), (c) => drawProne(c, 1), drawKnock, (c) => drawSit(c, 0), (c) => drawSit(c, 1)];
   return {
-    ...renderSheet(frames, DOWN_W, FRAME_H, scale),
+    ...withOutfit(isWinter, () => renderSheet(frames, DOWN_W, FRAME_H, scale)),
     anims: {
       trip: { frames: [0], fps: 1 },
       prone: { frames: [1, 2], fps: 4 },
@@ -431,26 +566,36 @@ function poses() {
     armB: [[3, 5], [5, 4]],
     tail: [-0.15, 1],
     tailPhase: (i * Math.PI) / 2,
-    phone: [37, 43, i === 1],
+    phone: { flash: i === 1 },
   }));
+  // Mid-stride with the phone held out front, its flash firing.
+  const flash = {
+    legF: sample(RUN_LEG, 1.5),
+    legB: sample(RUN_LEG, 4.5),
+    armF: [[6, -2], [12, -5]],
+    armB: [[-2, 5], [-5, 9]],
+    tailPhase: 1.5,
+    phone: { flash: true },
+  };
   return {
-    list: [...run, jump, fall, hurt, ...idle],
+    list: [...run, jump, fall, hurt, ...idle, flash],
     anims: {
       run: { frames: [0, 1, 2, 3, 4, 5, 6, 7], fps: 14 },
       jump: { frames: [8], fps: 1 },
       fall: { frames: [9], fps: 1 },
       hurt: { frames: [10], fps: 1 },
       idle: { frames: [11, 12, 13, 14], fps: 4 },
+      flash: { frames: [15], fps: 1 },
     },
   };
 }
 
-export function buildHero(scale) {
+export function buildHero(scale, { winter: isWinter = false } = {}) {
   const { list, anims } = poses();
   const frames = list.map((p) => (ctx) => drawPose(ctx, p));
   const px = toPx(scale);
   return {
-    ...renderSheet(frames, FRAME_W, FRAME_H, scale),
+    ...withOutfit(isWinter, () => renderSheet(frames, FRAME_W, FRAME_H, scale)),
     anims,
     body: px({ x: 22, y: 10, w: 24, h: 68 }),
     feetY: Math.round(FEET_Y * scale),

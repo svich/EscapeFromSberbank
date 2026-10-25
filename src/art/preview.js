@@ -60,11 +60,12 @@ const pickupRow = document.getElementById('pickups');
 const objects = [
   [obstacleRow, 'elder', 'grannies & grandpa', 'walk0'],
   [obstacleRow, 'worker', 'Chelyabinsk workers', 'walk0'],
+  [obstacleRow, 'bigman', 'big man (blind him)', 'walk'],
   [obstacleRow, 'chair', 'office chair'],
   [obstacleRow, 'shelf', 'bookcase'],
   [obstacleRow, 'money', 'money pile'],
   [obstacleRow, 'safe', 'safe'],
-  [obstacleRow, 'logo', 'logo ball'],
+  [obstacleRow, 'snowball', 'snowball'],
   [obstacleRow, 'door', 'exit door'],
   [obstacleRow, 'taxi', 'taxi: the way out'],
   [pickupRow, 'coin', 'coin: level goal', 'spin'],
@@ -74,7 +75,7 @@ const objects = [
 for (const [row, key, label, anim] of objects) {
   const s = sprites[key];
   cell(row, label, s.w, s.h, (ctx, t) => {
-    if (key === 'logo') drawRotated(ctx, key, 0, 0, -t / 300);
+    if (key === 'snowball') drawRotated(ctx, key, 0, 0, -t / 300);
     else drawFrame(ctx, key, anim ? frameAt(key, anim, t) : 0, 0, 0);
   });
 }
@@ -95,7 +96,7 @@ function tile(ctx, img, offset, y) {
 const ZONES = [
   ['office', 'Zone 1: open space', [['elder', 1200, 'walk0'], ['coin', 1650, 'spin', 700], ['chair', 2200]]],
   ['backrooms', 'Zone 2: backrooms', [['shelf', 1250], ['chocolate', 1750, null, 700], ['money', 2050], ['safe', 2350]]],
-  ['street', 'Zone 3: winter Chelyabinsk', [['worker', 1300, 'walk0'], ['coffee', 1800, 'steam', 760], ['taxi', 2400]]],
+  ['street', 'Zone 3: winter Chelyabinsk', [['worker', 1100, 'walk0'], ['snowball', 1500], ['bigman', 1900, 'walk'], ['taxi', 2400]]],
 ];
 
 const zoneRoot = document.getElementById('zones');
@@ -126,7 +127,7 @@ for (const [zone, label, props] of ZONES) {
       if (!s) continue;
       const x = ((((base - dist) % 2600) + 2600) % 2600) - 320;
       const py = y ?? GROUND_Y - s.h;
-      if (key === 'logo') drawRotated(ctx, key, x, py, -dist / 55);
+      if (key === 'snowball') drawRotated(ctx, key, x, py, -dist / 55);
       else drawFrame(ctx, key, anim ? frameAt(key, anim, t) : 0, x, py);
     }
 

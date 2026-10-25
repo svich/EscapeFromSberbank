@@ -3,7 +3,7 @@ import { CONFIG } from '../config.js';
 import { addMuteButton } from '../ui/mute.js';
 import { addText } from '../ui/text.js';
 
-const W = CONFIG.width;
+const { width: W, height: H } = CONFIG;
 const ZONE_COLORS = [0x9aa0c0, 0x3d7bd9, 0x21a038];
 const BAR = { x: 640, y: 40, w: 640, h: 20 };
 const DASH_BAR = { x: 118, y: 154, w: 200, h: 24 };
@@ -43,6 +43,8 @@ export class HUDScene extends Phaser.Scene {
       .zone(pause.x, pause.y, pause.width + 16, pause.height + 16)
       .setInteractive({ useHandCursor: true })
       .on('pointerdown', () => this.scene.get('Game').pauseGame());
+
+    if (this.sys.game.device.input.touch) this.addFlashButton(W - 130, H - 150);
 
     // Built up front (while the run is still black) so showing one costs nothing.
     this.banners = CONFIG.zones.map((_, i) => this.makeBanner(i));
@@ -98,6 +100,22 @@ export class HUDScene extends Phaser.Scene {
       this.zoneLabels.forEach((label, i) => label.setAlpha(i === zone ? 1 : 0.5));
       this.showBanner(zone);
     }
+  }
+
+  // Touch screens tap to jump, so the phone flash gets its own button.
+  addFlashButton(x, y) {
+    const g = this.add.graphics();
+    g.fillStyle(0xffffff, 0.85).fillCircle(x, y, 74);
+    g.lineStyle(6, 0x2b2140, 0.9).strokeCircle(x, y, 74);
+    g.fillStyle(0x2b2140, 1).fillRoundedRect(x - 40, y - 22, 80, 54, 10);
+    g.fillRoundedRect(x - 30, y - 34, 24, 16, 4);
+    g.fillStyle(0xffffff, 1).fillCircle(x + 4, y + 5, 17);
+    g.fillStyle(0x2b2140, 1).fillCircle(x + 4, y + 5, 10);
+    g.fillStyle(0xffd23f, 1).fillCircle(x + 26, y - 10, 5);
+    this.add
+      .zone(x, y, 160, 160)
+      .setInteractive()
+      .on('pointerdown', () => this.scene.get('Game').flash());
   }
 
   // left: share of the dash still to go, 0 hides it.

@@ -61,7 +61,7 @@ export class BootScene extends Phaser.Scene {
       this.add.image(80 + (i % 12) * 150, 80 + Math.floor(i / 12) * 150, key, 0).setScale(0.25);
     });
     this.add.image(W / 2, H / 2, 'hero', 0).setTint(0xffffff).setTintMode(Phaser.TintModes.FILL);
-    this.add.sprite(W / 2, H / 2, 'logo', 0).setAngle(30).setAlpha(0.5);
+    this.add.sprite(W / 2, H / 2, 'snowball', 0).setAngle(30).setAlpha(0.5);
     this.add.tileSprite(0, 0, 256, 160, 'bg-office-floor').setOrigin(0, 0).setTilePosition(10, 0);
     for (const tex of ['fx-dot', 'fx-spark', 'fx-confetti']) {
       if (!this.textures.exists(tex)) continue;

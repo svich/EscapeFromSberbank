@@ -1,6 +1,6 @@
 import * as Phaser from 'phaser';
 import { audio } from '../audio/index.js';
-import { CONFIG } from '../config.js';
+import { CONFIG, skinForZone } from '../config.js';
 import { Backdrop } from '../systems/Backdrop.js';
 import { metrics } from '../systems/metrics.js';
 import { addPanel } from '../ui/panel.js';
@@ -28,10 +28,10 @@ export class VictoryScene extends Phaser.Scene {
     this.add.rectangle(0, 0, W, H, 0x1a1423, 0.35).setOrigin(0, 0).setDepth(5);
 
     const hero = this.add
-      .sprite(330, G, 'hero', 0)
+      .sprite(330, G, skinForZone(CONFIG.zones.length - 1), 0)
       .setOrigin(0.5, metrics.hero.originY)
       .setDepth(6)
-      .play('hero-idle');
+      .play(`${skinForZone(CONFIG.zones.length - 1)}-idle`);
     this.tweens.add({ targets: hero, y: G - 40, duration: 220, yoyo: true, repeat: -1, repeatDelay: 700, ease: 'Quad.easeOut' });
 
     const title = addText(this, W / 2, 40, 'ПОЗДРАВЛЯЕМ!', { size: 128, weight: 700, color: '#7ee08f', origin: [0.5, 0] }).setDepth(6);

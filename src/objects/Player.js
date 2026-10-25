@@ -21,8 +21,10 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
     this.body.setMaxVelocity(0, P.maxFall);
     this.body.setGravityY(P.gravity);
 
+    this.skin = 'hero'; // outfit: sprite / anim prefix, see setSkin
     this.mode = 'run'; // run | dead | exit
     this.grounded = true;
+    this.flashTime = 0; // s left holding the phone up
     this.coyote = 0;
     this.buffer = 0;
     this.airJumps = P.airJumps;
@@ -48,6 +50,7 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
     const onGround = this.onGround;
     body.setGravityY(body.velocity.y > 0 ? P.gravity * P.fallGravityMul : P.gravity);
 
+    this.flashTime = Math.max(0, this.flashTime - dt);
     if (this.mode !== 'run') {
       if (this.mode === 'dead') this.settle(dt, onGround);
       this.updateAnim(onGround);
@@ -112,6 +115,18 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
     this.emit('player-jump', air);
   }
 
+  // Outfit for this level: 'hero' or 'heroWinter'; the knocked-down poses
+  // come from the matching `${skin}Down` sheet.
+  setSkin(skin) {
+    this.skin = skin;
+    this.play(`${skin}-run`);
+  }
+
+  // Holds the phone up for a camera flash.
+  flash() {
+    this.flashTime = 0.3;
+  }
+
   // fall: 'trip' (forward onto her stomach), 'knock' (bounced back onto her
   // bottom) or 'hurt' (a plain hurt hop).
   die(fall = 'hurt') {
@@ -122,7 +137,7 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
     this.downed = false;
     const hop = { trip: 170, knock: 200, hurt: 220 }[fall];
     this.body.setVelocityY(-hop * SCALE);
-    this.deadAnim = fall === 'hurt' ? 'hero-hurt' : `heroDown-${fall}`;
+    this.deadAnim = fall === 'hurt' ? `${this.skin}-hurt` : `${this.skin}Down-${fall}`;
     if (fall !== 'hurt') this.setHitbox(this.hero.downBody);
     this.play(this.deadAnim);
   }
@@ -132,7 +147,7 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
     this.downTime += dt;
     if (this.downed || this.fall === 'hurt' || !onGround || this.downTime < 0.1) return;
     this.downed = true;
-    this.deadAnim = this.fall === 'trip' ? 'heroDown-prone' : 'heroDown-sit';
+    this.deadAnim = `${this.skin}Down-${this.fall === 'trip' ? 'prone' : 'sit'}`;
     this.emit('player-down', this.fall);
   }
 
@@ -152,8 +167,9 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
   updateAnim(onGround) {
     let key;
     if (this.mode === 'dead') key = this.deadAnim;
-    else if (!onGround) key = this.body.velocity.y < 0 ? 'hero-jump' : 'hero-fall';
-    else key = 'hero-run';
+    else if (this.flashTime > 0 && this.mode === 'run') key = `${this.skin}-flash`;
+    else if (!onGround) key = `${this.skin}-${this.body.velocity.y < 0 ? 'jump' : 'fall'}`;
+    else key = `${this.skin}-run`;
     if (this.anims.currentAnim?.key !== key) this.play(key);
   }
 }

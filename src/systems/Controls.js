@@ -1,12 +1,14 @@
 import { CONFIG } from '../config.js';
 
-// One button: Space (or a tap anywhere) jumps, again in the air for the
-// double jump. Presses are edge-triggered flags read once per frame; "held"
-// reads live key / pointer state (for variable jump height).
+// Space (or a tap anywhere) jumps, again in the air for the double jump; a
+// left mouse click fires the phone flash (touch screens get a HUD button).
+// Presses are edge-triggered flags read once per frame; "held" reads live
+// key / pointer state (for variable jump height).
 export class Controls {
   constructor(scene, { onPause, onMute } = {}) {
     this.enabled = true;
     this.jumpPressed = false;
+    this.flashPressed = false;
     this.touchJump = new Set();
 
     const kb = scene.input.keyboard;
@@ -25,8 +27,12 @@ export class Controls {
 
     scene.input.on('pointerdown', (pointer) => {
       if (!this.enabled) return;
-      this.jumpPressed = true;
-      this.touchJump.add(pointer.id);
+      if (pointer.wasTouch) {
+        this.jumpPressed = true;
+        this.touchJump.add(pointer.id);
+      } else if (pointer.leftButtonDown()) {
+        this.flashPressed = true;
+      }
     });
     const release = (pointer) => this.touchJump.delete(pointer.id);
     scene.input.on('pointerup', release);
@@ -42,13 +48,16 @@ export class Controls {
     const input = {
       jumpPressed: this.jumpPressed,
       jumpHeld: this.jumpHeld,
+      flashPressed: this.flashPressed,
     };
     this.jumpPressed = false;
+    this.flashPressed = false;
     return input;
   }
 
   reset() {
     this.jumpPressed = false;
+    this.flashPressed = false;
     this.touchJump.clear();
   }
 }

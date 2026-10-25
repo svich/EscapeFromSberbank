@@ -135,7 +135,7 @@ export class Spawner {
       this.coffeeLeft -= 1;
       this.nextCoffeeAt = mid + randRange(PK.coffeeEvery);
     } else if (coin && free >= 0.75 && Math.random() < PK.lineChance) {
-      const n = clamp(Math.floor((free - 0.25) / PK.spacing) + 1, 3, 6);
+      const n = clamp(Math.floor((free - 0.25) / PK.spacing) + 1, 3, PK.rowMax);
       const start = mid - ((n - 1) * PK.spacing) / 2;
       const arc = Math.random() < 0.5;
       for (let i = 0; i < n; i++) {
@@ -147,7 +147,10 @@ export class Spawner {
     if (!coin) return;
     const kind = CONFIG.obstacles[next.type].kind;
     const top = metrics.obstacles[next.type].top;
-    if (Math.random() < PK.overChance) {
+    if (kind === 'flash') {
+      // Right through him once he's blinded.
+      if (Math.random() < PK.overChance) this.queue.push({ kind: 'coin', arrival: next.arrival, height: groundH });
+    } else if (Math.random() < PK.overChance) {
       // Reward for clearing it; kept within reach of the jump that clears it.
       const reach = hero.standH + jump.apex + (kind === 'double' ? jump.extra : 0);
       const height = Math.min(top + 4 * SCALE + coin.h / 2, reach - coin.h / 2 - 2 * SCALE);

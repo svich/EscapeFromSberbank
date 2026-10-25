@@ -1,6 +1,6 @@
 import * as Phaser from 'phaser';
 import { audio } from '../audio/index.js';
-import { CONFIG } from '../config.js';
+import { CONFIG, skinForZone } from '../config.js';
 import { Backdrop } from '../systems/Backdrop.js';
 import { metrics } from '../systems/metrics.js';
 import { addPanel } from '../ui/panel.js';
@@ -63,10 +63,10 @@ export class GameOverScene extends Phaser.Scene {
     this.add.rectangle(0, 0, W, H, 0x1a1423, 0.5).setOrigin(0, 0).setDepth(5);
 
     this.add
-      .sprite(330, G, 'hero', 0)
+      .sprite(330, G, skinForZone(zone), 0)
       .setOrigin(0.5, metrics.hero.originY)
       .setDepth(6)
-      .play('hero-hurt');
+      .play(`${skinForZone(zone)}-hurt`);
 
     addText(this, W / 2, 50, 'Обратно на работу...', { size: 120, weight: 700, color: '#ff8fa3', origin: [0.5, 0] }).setDepth(6);
     addText(this, W / 2, 210, Phaser.Utils.Array.GetRandom(QUIPS), { size: 44, weight: 400, color: '#e9e4f2', origin: [0.5, 0] }).setDepth(6);
